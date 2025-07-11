@@ -1,4 +1,6 @@
 <!--intro-start-->
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ssciwr/onehealth-data-backend/main.svg)](https://results.pre-commit.ci/latest/github/ssciwr/onehealth-data-backend/main)
+
 # OneHealth data processing pipeline
 
 A data processing pipeline for Copernicus and Eurostat data.
