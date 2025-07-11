@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "onehealth-data-backend"
+license = {text = "MIT License"}
+readme = "README.md"
+description = "Data processing for OneHealth project"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+authors = [
+  { name="Tuyen Le", email="ssc@iwr.uni-heidelberg.de" },
+  { name="Inga Ulusoy", email="ssc@iwr.uni-heidelberg.de" },
+]
+version = "0.0.1"
+
+dependencies = [
+  "cdsapi",
+  "xarray",
+  "netcdf4",
+  "cfgrib",
+  "jupyter",
+  "matplotlib",
+  "geopandas",
+  "dask[complete]",
+  "scipy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+    "mkdocs-material",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-glightbox",
+    "mkdocs-jupyter",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-section-index",
+    "mkdocs-minify-plugin",
+    "mkdocstrings-python",
+]
+
+[project.urls]
+Homepage = "https://github.com/ssciwr/onehealth-data-backend"
+Issues = "https://github.com/ssciwr/onehealth-data-backend/issues"
