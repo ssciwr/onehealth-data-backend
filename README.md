@@ -2,7 +2,7 @@
 # OneHealth data processing pipeline
 
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ssciwr/onehealth-data-backend/main.svg)](https://results.pre-commit.ci/latest/github/ssciwr/onehealth-data-backend/main)
-![License: MIT](https://img.shields.io/github/license/onehealth-data-backend/AMMICO)
+![License: MIT](https://img.shields.io/github/license/ssciwr/onehealth-data-backend)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ssciwr/onehealth-data-backend/ci.yml?branch=main)
 ![codecov](https://img.shields.io/codecov/c/github/ssciwr/onehealth-data-backend)
 ![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ssciwr_onehealth-data-backend&metric=alert_status)
