@@ -1,0 +1,182 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "adjust_longitude": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to adjust longitude values to the range [-180, 180]."
+        },
+        "adjust_longitude_vname": {
+            "type": "string",
+            "default": "longitude",
+            "description": "Variable name of the longitude values to adjust."
+        },
+        "adjust_longitude_fname": {
+            "type": "string",
+            "default": "adjlon",
+            "description": "Suffix of file names after adjusting longitude values."
+        },
+        "convert_kelvin_to_celsius": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to convert temperature values from Kelvin to Celsius."
+        },
+        "convert_kelvin_to_celsius_vname": {
+            "type": "string",
+            "default": "t2m",
+            "description": "Variable name of the temperature values to convert."
+        },
+        "convert_kelvin_to_celsius_fname": {
+            "type": "string",
+            "default": "celsius",
+            "description": "Suffix of file names after converting temperature values to Celsius."
+        },
+        "convert_m_to_mm_precipitation": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to convert precipitation values from meters to millimeters."
+        },
+        "convert_m_to_mm_precipitation_vname": {
+            "type": "string",
+            "default": "tp",
+            "description": "Variable name of the precipitation values to convert."
+        },
+        "convert_m_to_mm_precipitation_fname": {
+            "type": "string",
+            "default": "mm",
+            "description": "Suffix of file names after converting precipitation values to millimeters."
+        },
+        "resample_grid": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to resample the grid to a specified resolution."
+        },
+        "resample_grid_vname": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": ["latitude", "longitude"],
+            "description": "Variable names of the latitude and longitude values for resampling."
+        },
+        "resample_degree": {
+            "type": "number",
+            "default": 0.5,
+            "description": "Value of the target grid resolution."
+        },
+        "resample_grid_fname": {
+            "type": "string",
+            "default": "deg_trim",
+            "description": "Suffix of file names after resampling the grid."
+        },
+        "truncate_date": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to truncate the time series from a specified date."
+        },
+        "truncate_date_from": {
+            "type": "string",
+            "default": "2020-01-01",
+            "description": "Date in YYYY-MM-DD to truncate the time series from."
+        },
+        "truncate_date_vname": {
+            "type": "string",
+            "default": "time",
+            "description": "Variable name of the time values to truncate."
+        },
+        "unify_coords": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to unify coordinate names in the data file."
+        },
+        "unify_coords_fname": {
+            "type": "string",
+            "default": "unicoords",
+            "description": "Suffix of file names after unifying coordinate names."
+        },
+        "uni_coords": {
+            "type": "object",
+            "patternProperties": {
+                "^.*$": {
+                    "type": "string"
+                }
+            },
+            "default": {
+                "lat": "latitude",
+                "lon": "longitude",
+                "valid_time": "time"
+            },
+            "description": "Mapping of variable names to their new names."
+        }
+    },
+    "additionalProperties": false,
+    "allOf": [
+        {
+            "if": {
+                "required": ["adjust_longitude"],
+                "properties": {
+                    "adjust_longitude": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["adjust_longitude_vname", "adjust_longitude_fname"]
+            }
+        },
+        {
+            "if": {
+                "required": ["convert_kelvin_to_celsius"],
+                "properties": {
+                    "convert_kelvin_to_celsius": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["convert_kelvin_to_celsius_vname", "convert_kelvin_to_celsius_fname"]
+            }
+        },
+        {
+            "if": {
+                "required": ["convert_m_to_mm_precipitation"],
+                "properties": {
+                    "convert_m_to_mm_precipitation": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["convert_m_to_mm_precipitation_vname", "convert_m_to_mm_precipitation_fname"]
+            }
+        },
+        {
+            "if": {
+                "required": ["resample_grid"],
+                "properties": {
+                    "resample_grid": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["resample_grid_vname", "resample_degree", "resample_grid_fname"]
+            }
+        },
+        {
+            "if": {
+                "required": ["truncate_date"],
+                "properties": {
+                    "truncate_date": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["truncate_date_from", "truncate_date_vname"]
+            }
+        },
+        {
+            "if": {
+                "required": ["unify_coords"],
+                "properties": {
+                    "unify_coords": { "const": true }
+                }
+            },
+            "then": {
+                "required": ["unify_coords_fname", "uni_coords"]
+            }
+        }
+    ]
+}

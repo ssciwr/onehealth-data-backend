@@ -1,0 +1,9 @@
+cdsapi
+xarray
+netcdf4
+cfgrib
+jupyter
+matplotlib
+geopandas
+dask[complete]
+scipy

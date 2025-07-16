@@ -1,0 +1,170 @@
+site_name: One Health Platform
+site_url: https://ssciwr.github.io/onehealth-data-backend/
+repo_url: https://github.com/ssciwr/onehealth-data-backend
+repo_name: "ssciwr/onehealth-data-backend"
+copyright: Copyright &copy; 2025, Scientific Software Center, Heidelberg University.
+watch: [docs, docs_extra, README.md, LICENSE, mkdocs.yml]
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+nav:
+  - Home:
+    - Overview: index.md
+    - License: license.md
+  - About: about.md
+  - Data: data.md
+  - Data Lake:
+    - Overview: datalake.md
+    - Data Flowchart: source/_static/onehealth_data_flow.jpg
+  - References:
+    - Package Modules: reference/
+    - Demonstration Notebooks:
+      - data_pipeline.ipynb: source/notebooks/data_pipeline.ipynb
+      - prepare_data.ipynb: source/notebooks/prepare_data.ipynb
+  - Issues: issues.md
+  - Contact: contact.md
+
+theme:
+  name: material
+  #logo: path/to/file.png
+  features:
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tooltips
+    - navigation.footer
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    admonition:
+      note: material/pencil-circle
+
+  palette:
+  - media: "(prefers-color-scheme)"
+    toggle:
+      icon: material/brightness-auto
+      name: Switch to light mode
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: custom
+    accent: blue
+    toggle:
+      icon: material/weather-sunny
+      name: Switch to dark mode
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: indigo
+    toggle:
+      icon: material/weather-night
+      name: Switch to system preference
+
+
+extra_css:
+  - source/stylesheets/md4py.css
+  - source/stylesheets/style.css
+
+plugins:
+  - search
+  - include-markdown
+  - glightbox
+  - mkdocs-jupyter:
+      execute: false
+      ignore_h1_titles: true
+  - gen-files:
+      scripts:
+        - _scripts/gen_reference_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_section_style: list
+            show_source: false
+            show_symbol_type_heading: true
+            show_root_heading: true
+            show_symbol_type_toc: true
+            show_submodules: true
+            heading_level: 2
+            parameter_headings: false
+            separate_signature: true
+            show_signature_annotations: false
+            signature_crossrefs: true
+            summary: true
+            docstring_options:
+              ignore_init_summary: true
+            merge_init_into_class: true
+            show_if_no_docstring: true
+            show_docstring_attributes: true
+            show_docstring_functions: true
+            show_docstring_classes: true
+            show_docstring_modules: true
+            show_docstring_description: true
+            show_docstring_examples: true
+            show_docstring_raises: true
+            show_docstring_returns: true
+  - minify:
+      minify_html: !ENV [DEPLOY, false]
+
+markdown_extensions:
+  - attr_list
+  - abbr
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - md_in_html
+  - pymdownx.blocks.caption
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      use_pygments: true
+      linenums: true
+      linenums_style: pymdownx-inline
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      auto_append:
+        - docs_extra/abbreviations.md
+  - pymdownx.smartsymbols:
+      trademark: true
+      copyright: true
+      registered: true
+      care_of: true
+      plusminus: true
+      arrows: true
+      notequal: true
+      fractions: true
+      ordinal_numbers: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tilde
+  - toc:
+      permalink: ⚓︎
+
+extra_javascript:
+  - source/javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - source/javascripts/md4py.js
