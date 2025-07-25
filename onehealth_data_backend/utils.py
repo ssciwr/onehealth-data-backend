@@ -7,7 +7,7 @@ from datetime import datetime
 import socket
 
 
-def check_non_empty_file(file_path: Path) -> bool:
+def is_non_empty_file(file_path: Path) -> bool:
     """Check if a file exists and is not empty.
 
     Args:

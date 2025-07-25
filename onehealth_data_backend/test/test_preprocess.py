@@ -4,6 +4,7 @@ import xarray as xr
 from onehealth_data_backend import preprocess
 import geopandas as gpd
 from shapely.geometry import Polygon
+from pathlib import Path
 
 
 @pytest.fixture()
@@ -987,3 +988,74 @@ def test_aggregate_netcdf_nuts_agg_dict(tmp_path, get_dataset, get_nuts_data):
             normalize_time=False,
         )
     assert "tp" in out_data.columns
+
+
+def test_aggregate_data_by_nuts_invalid(tmp_path):
+    # non dict
+    with pytest.raises(ValueError):
+        preprocess.aggregate_data_by_nuts("something", tmp_path / "nuts.shp")
+
+    # empty dict
+    with pytest.raises(ValueError):
+        preprocess.aggregate_data_by_nuts({}, tmp_path / "nuts.shp")
+
+    # dict with non-exist file
+    with pytest.raises(ValueError):
+        preprocess.aggregate_data_by_nuts(
+            {"era5": (Path("something"), None)}, tmp_path / "nuts.shp"
+        )
+
+    # dict with empty file
+    nc_file = tmp_path / "test_data.nc"
+    nc_file.touch()  # create an empty file
+    with pytest.raises(ValueError):
+        preprocess.aggregate_data_by_nuts(
+            {"era5": (nc_file, None)}, tmp_path / "nuts.shp"
+        )
+
+    # dict with non-nuts data
+    with open(nc_file, "w") as f:
+        f.write("This is a test file.")
+    with pytest.raises(ValueError):
+        preprocess.aggregate_data_by_nuts(
+            {"era5": (nc_file, None)}, tmp_path / "nuts.shp"
+        )
+
+
+def test_aggregate_data_by_nuts(tmp_path, get_dataset, get_nuts_data, tmpdir):
+    out_dir = Path(tmpdir) / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    # save nuts data to a temporary file
+    get_nuts_data.to_file(tmp_path / "nuts.shp")
+
+    # aggregate data by NUTS regions
+    out_file = preprocess.aggregate_data_by_nuts(
+        {"era5": (file_path, None)},
+        tmp_path / "nuts.shp",
+        normalize_time=True,
+        output_dir=out_dir,
+    )
+
+    # check if the output file is created
+    assert out_file.exists()
+    assert out_file.suffix == ".nc"
+    assert out_file.parent == out_dir
+    with xr.open_dataset(out_file) as ds:
+        # check if the data is aggregated correctly
+        assert "NUTS_ID" in ds.coords
+        assert "time" in ds.coords
+        assert "t2m" in ds.data_vars
+        assert "tp" in ds.data_vars
+
+        # check if the time is normalized to midnight
+        assert np.all(ds["time"].dt.hour == 0)
+
+    # clean up the output directory
+    for file in out_dir.glob("*"):
+        file.unlink()
+    out_dir.rmdir()  # remove the output directory after test
