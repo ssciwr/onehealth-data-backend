@@ -642,7 +642,7 @@ def preprocess_data_file(
     Returns:
         xr.Dataset: Preprocessed dataset.
     """
-    if not utils.check_non_empty_file(netcdf_file):
+    if not utils.is_non_empty_file(netcdf_file):
         raise ValueError("netcdf_file must be a valid file path.")
 
     if not settings:
@@ -721,9 +721,8 @@ def _aggregate_netcdf_nuts(
         nc_data_merged = nc_data_merged[~nc_data_merged["NUTS_ID"].isna()]
 
         # group by NUTS_ID and time, aggregate using agg_dict
-        invalid_agg_dict = (
-            agg_dict is None
-            or not isinstance(agg_dict, dict)
+        invalid_agg_dict = agg_dict is not None and (
+            not isinstance(agg_dict, dict)
             or not all(
                 isinstance(var, str) and isinstance(func, str)
                 for var, func in agg_dict.items()
@@ -731,12 +730,13 @@ def _aggregate_netcdf_nuts(
             or (isinstance(agg_dict, dict) and len(agg_dict) == 0)
             or not all(var in var_names for var in agg_dict.keys())
         )
-        if invalid_agg_dict:
+        if invalid_agg_dict or agg_dict is None:
+            if invalid_agg_dict:
+                warnings.warn(
+                    "Invalid agg_dict provided. Using default aggregation (mean) for all variables.",
+                    UserWarning,
+                )
             # default aggregation is mean for each variable
-            warnings.warn(
-                "Invalid agg_dict provided. Using default aggregation (mean) for all variables.",
-                UserWarning,
-            )
             agg_dict = {var: "mean" for var in var_names}
             r_var_names = var_names
         else:
@@ -779,12 +779,15 @@ def aggregate_data_by_nuts(
     Returns:
         Path: Path to the aggregated NetCDF file.
     """
+    if not isinstance(netcdf_files, dict) or not netcdf_files:
+        raise ValueError("netcdf_files must be a non-empty dictionary.")
+
     for netcdf_file in netcdf_files.values():
-        if not utils.check_non_empty_file(netcdf_file[0]):
+        if not utils.is_non_empty_file(netcdf_file[0]):
             raise ValueError(
                 f"NetCDF file '{netcdf_file[0]}' is not valid path or empty."
             )
-    if not utils.check_non_empty_file(nuts_file):
+    if not utils.is_non_empty_file(nuts_file):
         raise ValueError("nuts_file must be a valid file path.")
 
     # load data from the nuts shape file
@@ -805,6 +808,7 @@ def aggregate_data_by_nuts(
     # merge nuts data with aggregated NetCDF data
     out_data = nuts_data
     agg_var_names = []
+    first_merge = True
     for ds_name, nc_path in netcdf_files.items():
         print(f"Processing NetCDF file: {nc_path}")
 
@@ -816,7 +820,11 @@ def aggregate_data_by_nuts(
         )
 
         # merge nuts data with aggregated NetCDF data
-        out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="left")
+        if first_merge:
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="left")
+            first_merge = False
+        else:
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="left")
 
         # update the output file name
         out_file_name += f"_{ds_name}"
@@ -842,3 +850,5 @@ def aggregate_data_by_nuts(
     output_file = output_dir / out_file_name
     ds_out.to_netcdf(output_file, mode="w")
     print(f"Aggregated data saved to: {output_file}")
+
+    return output_file

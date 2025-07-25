@@ -15,18 +15,18 @@ def get_files(dir_path: Path, name_phrase: str) -> list[Path]:
     ]
 
 
-def test_check_non_empty_file(tmp_path):
+def test_is_non_empty_file(tmp_path):
     file_path = tmp_path / "test_file.txt"
     # file is not created yet
-    assert utils.check_non_empty_file(file_path) is False
+    assert utils.is_non_empty_file(file_path) is False
 
     # create an empty file
     file_path.touch()
-    assert utils.check_non_empty_file(file_path) is False
+    assert utils.is_non_empty_file(file_path) is False
 
     # create a non-empty file
     file_path.write_text("test")
-    assert utils.check_non_empty_file(file_path) is True
+    assert utils.is_non_empty_file(file_path) is True
 
 
 def test_is_valid_settings():
