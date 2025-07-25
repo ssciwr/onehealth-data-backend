@@ -728,10 +728,15 @@ def _aggregate_netcdf_nuts(
                 isinstance(var, str) and isinstance(func, str)
                 for var, func in agg_dict.items()
             )
+            or (isinstance(agg_dict, dict) and len(agg_dict) == 0)
             or not all(var in var_names for var in agg_dict.keys())
         )
         if invalid_agg_dict:
             # default aggregation is mean for each variable
+            warnings.warn(
+                "Invalid agg_dict provided. Using default aggregation (mean) for all variables.",
+                UserWarning,
+            )
             agg_dict = {var: "mean" for var in var_names}
             r_var_names = var_names
         else:
