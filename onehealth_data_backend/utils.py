@@ -7,6 +7,24 @@ from datetime import datetime
 import socket
 
 
+def check_non_empty_file(file_path: Path) -> bool:
+    """Check if a file exists and is not empty.
+
+    Args:
+        file_path (Path): The path to the file.
+
+    Returns:
+        bool: True if the file exists and is not empty, False otherwise.
+    """
+    invalid_file = (
+        not file_path or not file_path.exists() or file_path.stat().st_size == 0
+    )
+    if invalid_file:
+        return False
+
+    return True
+
+
 def is_valid_settings(settings: dict) -> bool:
     """Check if the settings are valid.
     Args:
