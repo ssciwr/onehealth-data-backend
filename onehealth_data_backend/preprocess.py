@@ -820,6 +820,7 @@ def aggregate_data_by_nuts(
         )
 
         # merge nuts data with aggregated NetCDF data
+        # TODO: what if nc files have same data variable names?
         if first_merge:
             out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="left")
             first_merge = False
