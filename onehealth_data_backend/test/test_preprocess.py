@@ -1073,7 +1073,38 @@ def test_aggregate_data_by_nuts(tmp_path, get_dataset, get_nuts_data, tmpdir):
     out_dir.rmdir()  # remove the output directory after test
 
 
-def test_aggregate_data_by_nuts_multi_nc(tmp_path, get_dataset, get_nuts_data, tmpdir):
+def test_aggregate_data_by_nuts_outdir(tmp_path, get_dataset, get_nuts_data):
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    # save nuts data to a temporary file
+    nuts_file = tmp_path / "nuts.shp"
+    get_nuts_data.to_file(nuts_file)
+
+    # aggregate data by NUTS regions with output directory
+    out_file = preprocess.aggregate_data_by_nuts(
+        {"era5": (file_path, None)},
+        nuts_file,
+        normalize_time=True,
+        output_dir=None,
+    )
+
+    # check if the output file is created in folder of nuts file
+    out_dir = nuts_file.parent
+    assert out_file.exists()
+    assert out_file.suffix == ".nc"
+    assert out_file.parent == out_dir
+
+    # clean up the output directory
+    for file in out_dir.glob("*"):
+        file.unlink()
+    out_dir.rmdir()  # remove the output directory after test
+
+
+def test_aggregate_data_by_nuts_diff_netcdfs(
+    tmp_path, get_dataset, get_nuts_data, tmpdir
+):
     out_dir = Path(tmpdir) / "output"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1115,6 +1146,47 @@ def test_aggregate_data_by_nuts_multi_nc(tmp_path, get_dataset, get_nuts_data, t
 
         # check if the time is normalized to midnight
         assert np.all(ds["time"].dt.hour == 0)
+
+    # clean up the output directory
+    for file in out_dir.glob("*"):
+        file.unlink()
+    out_dir.rmdir()  # remove the output directory after test
+
+
+def test_aggregate_data_by_nuts_dup_netcdfs(
+    tmp_path, get_dataset, get_nuts_data, tmpdir
+):
+    out_dir = Path(tmpdir) / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    # save nuts data to a temporary file
+    get_nuts_data.to_file(tmp_path / "nuts.shp")
+
+    # aggregate data by NUTS regions with duplicate netcdf files
+    out_file = preprocess.aggregate_data_by_nuts(
+        {"era5": (file_path, None), "era5_dup": (file_path, None)},
+        tmp_path / "nuts.shp",
+        normalize_time=True,
+        output_dir=out_dir,
+    )
+
+    # check if the output file is created
+    assert out_file.exists()
+    assert out_file.suffix == ".nc"
+    assert out_file.parent == out_dir
+    with xr.open_dataset(out_file) as ds:
+        # check if the data is aggregated correctly
+        assert "NUTS_ID" in ds.coords
+        assert "time" in ds.coords
+        assert "t2m" in ds.data_vars
+        assert "tp" in ds.data_vars
+        assert (
+            len(ds["t2m"].values.reshape(-1)) == 4
+        )  # two NUTS regions with two time points each
 
     # clean up the output directory
     for file in out_dir.glob("*"):
