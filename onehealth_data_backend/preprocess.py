@@ -5,6 +5,7 @@ import warnings
 from pathlib import Path
 from onehealth_data_backend import utils
 import geopandas as gpd
+import pandas as pd
 
 
 T = TypeVar("T", bound=Union[np.float64, xr.DataArray])
@@ -824,13 +825,24 @@ def aggregate_data_by_nuts(
         if first_merge:
             out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="left")
             first_merge = False
+        elif set(nc_data_agg.columns).issubset(set(out_data.columns)):
+            # if the next NetCDF file has the same data variable names,
+            # concat the data and drop duplicates
+            out_data = gpd.GeoDataFrame(
+                pd.concat([out_data, nc_data_agg])
+                .drop_duplicates(subset=["NUTS_ID", "time"], keep="last")
+                .sort_values("NUTS_ID", ignore_index=True),
+                crs=out_data.crs,
+            )
         else:
             out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="left")
 
         # update the output file name
         out_file_name += f"_{ds_name}"
 
-        agg_var_names.extend(r_var_names)
+        agg_var_names = agg_var_names + [
+            name for name in r_var_names if name not in agg_var_names
+        ]
 
     # filter the merged data to keep only
     # NUTS_ID, time, and aggregated data variables
