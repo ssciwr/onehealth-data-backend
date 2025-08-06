@@ -1153,6 +1153,62 @@ def test_aggregate_data_by_nuts_diff_netcdfs(
     out_dir.rmdir()  # remove the output directory after test
 
 
+def test_aggregate_data_by_nuts_diff_netcdfs_diff_times(
+    tmp_path, get_dataset, get_nuts_data, tmpdir
+):
+    out_dir = Path(tmpdir) / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # save dataset to a temporary file
+    file_path1 = tmp_path / "test_data1.nc"
+    file_path2 = tmp_path / "test_data2.nc"
+    get_dataset.to_netcdf(file_path1)
+    # modify the dataset for the second file
+    # to create ds with different time values
+    modified_dataset = get_dataset.copy()
+    modified_dataset["time"] = np.array(
+        ["2029-01-01T00:00:00", "2030-01-01T00:00:00"], dtype="datetime64"
+    )
+    # change variable names
+    modified_dataset = modified_dataset.rename({"t2m": "t2m_mod", "tp": "tp_mod"})
+    # save the modified dataset to a new file
+    modified_dataset.to_netcdf(file_path2)
+
+    # save nuts data to a temporary file
+    get_nuts_data.to_file(tmp_path / "nuts.shp")
+
+    # aggregate data by NUTS regions with different time values
+    out_file = preprocess.aggregate_data_by_nuts(
+        {"era5": (file_path1, None), "era5_mod": (file_path2, None)},
+        tmp_path / "nuts.shp",
+        normalize_time=True,
+        output_dir=out_dir,
+    )
+
+    # check if the output file is created
+    assert out_file.exists()
+    assert out_file.suffix == ".nc"
+    assert out_file.parent == out_dir
+    with xr.open_dataset(out_file) as ds:
+        # check if the data is aggregated correctly
+        assert "NUTS_ID" in ds.coords
+        assert "time" in ds.coords
+        assert "t2m" in ds.data_vars
+        assert "tp" in ds.data_vars
+        assert "t2m_mod" in ds.data_vars
+        assert "tp_mod" in ds.data_vars
+
+        # check if the time values are doubled
+        assert len(ds["time"]) == 4
+        assert ds["time"].values.min() == np.datetime64("2024-01-01T00:00:00")
+        assert ds["time"].values.max() == np.datetime64("2030-01-01T00:00:00")
+
+    # clean up the output directory
+    for file in out_dir.glob("*"):
+        file.unlink()
+    out_dir.rmdir()  # remove the output directory after test
+
+
 def test_aggregate_data_by_nuts_dup_netcdfs(
     tmp_path, get_dataset, get_nuts_data, tmpdir
 ):

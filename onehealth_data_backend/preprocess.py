@@ -823,7 +823,7 @@ def aggregate_data_by_nuts(
 
         # merge nuts data with aggregated NetCDF data
         if first_merge:
-            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="left")
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="outer")
             first_merge = False
         elif set(nc_data_agg.columns).issubset(set(out_data.columns)):
             # if the next NetCDF file has the same data variable names,
@@ -835,7 +835,7 @@ def aggregate_data_by_nuts(
                 crs=out_data.crs,
             )
         else:
-            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="left")
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="outer")
 
         # update the output file name
         out_file_name += f"_{ds_name}"
