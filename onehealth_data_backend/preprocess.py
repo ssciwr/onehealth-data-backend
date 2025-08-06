@@ -810,18 +810,18 @@ def aggregate_data_by_nuts(
     out_data = nuts_data
     agg_var_names = []
     first_merge = True
-    for ds_name, nc_path in netcdf_files.items():
-        print(f"Processing NetCDF file: {nc_path}")
+    for ds_name, file_info in netcdf_files.items():
+        file_path, agg_dict = file_info
+        print(f"Processing NetCDF file: {file_path}")
 
         nc_data_agg, r_var_names = _aggregate_netcdf_nuts(
             nuts_data,
-            nc_path[0],
-            nc_path[1],
+            file_path,
+            agg_dict,
             normalize_time=normalize_time,
         )
 
         # merge nuts data with aggregated NetCDF data
-        # TODO: what if nc files have same data variable names?
         if first_merge:
             out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="left")
             first_merge = False
