@@ -644,7 +644,7 @@ def preprocess_data_file(
         xr.Dataset: Preprocessed dataset.
     """
     if not utils.is_non_empty_file(netcdf_file):
-        raise ValueError("netcdf_file must be a valid file path.")
+        raise ValueError(f"netcdf_file {netcdf_file} does not exist or is empty.")
 
     if not settings:
         raise ValueError("settings must be a non-empty dictionary.")
@@ -738,7 +738,7 @@ def _aggregate_netcdf_nuts(
                     UserWarning,
                 )
             # default aggregation is mean for each variable
-            agg_dict = {var: "mean" for var in var_names}
+            agg_dict = dict.fromkeys(var_names, "mean")
             r_var_names = var_names
         else:
             # use provided aggregation functions
