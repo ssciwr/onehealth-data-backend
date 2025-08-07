@@ -35,6 +35,7 @@ dependencies = [
 dev = [
     "pre-commit",
     "pytest",
+    "nbstripout",
     "mkdocs-material",
     "mkdocs-include-markdown-plugin",
     "mkdocs-glightbox",
