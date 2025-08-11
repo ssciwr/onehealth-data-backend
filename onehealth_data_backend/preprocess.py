@@ -3,10 +3,14 @@ import xarray as xr
 import numpy as np
 import warnings
 from pathlib import Path
+from onehealth_data_backend import utils
+import geopandas as gpd
+import pandas as pd
 
 
 T = TypeVar("T", bound=Union[np.float64, xr.DataArray])
 warn_positive_resolution = "New resolution must be a positive number."
+CRS = 4326  # EPSG code for WGS 84
 
 
 def convert_360_to_180(longitude: T) -> T:
@@ -639,11 +643,8 @@ def preprocess_data_file(
     Returns:
         xr.Dataset: Preprocessed dataset.
     """
-    invalid_file = (
-        not netcdf_file or not netcdf_file.exists() or netcdf_file.stat().st_size == 0
-    )
-    if invalid_file:
-        raise ValueError("netcdf_file must be a valid file path.")
+    if not utils.is_non_empty_file(netcdf_file):
+        raise ValueError(f"netcdf_file {netcdf_file} does not exist or is empty.")
 
     if not settings:
         raise ValueError("settings must be a non-empty dictionary.")
@@ -660,3 +661,207 @@ def preprocess_data_file(
         dataset.to_netcdf(output_file, mode="w", format="NETCDF4")
         print(f"Processed dataset saved to: {output_file}")
         return dataset
+
+
+def _aggregate_netcdf_nuts(
+    nuts_data: gpd.GeoDataFrame,
+    nc_file: Path,
+    agg_dict: dict | None,
+    normalize_time: bool = True,
+) -> Tuple[gpd.GeoDataFrame, list[str]]:
+    """
+    Aggregate NetCDF data by NUTS regions.
+    Left join is used to ensure that all NUTS regions are included,
+    even if some regions do not have data in the NetCDF file.
+
+    Args:
+        nuts_data (gpd.GeoDataFrame): GeoDataFrame containing NUTS data from shape file.
+        nc_file (Path): Path to the NetCDF file.
+        agg_dict (dict | None): Dictionary of aggregation functions for each variable.
+            If None, default aggregation (i.e. mean) is used.
+        normalize_time (bool): If True, normalize time to the beginning of the day.
+            e.g. 2025-10-01T12:00:00 becomes 2025-10-01T00:00:00.
+            Default is True.
+
+    Returns:
+        Tuple[gpd.GeoDataFrame, list[str]]: First item is aggregated GeoDataFrame,
+            with coordinates "NUTS_ID", "time", and
+            data variables include aggregated data variables.
+            The second item in the tuple is list of data variable names.
+    """
+    with xr.open_dataset(nc_file) as dataset:
+        # Ensure the dataset has the required coordinates
+        if not all(
+            coord in dataset.coords for coord in ["latitude", "longitude", "time"]
+        ):
+            raise ValueError(
+                f"NetCDF file '{nc_file}' must contain "
+                f"'latitude', 'longitude', and 'time' coordinates."
+            )
+
+        if normalize_time:
+            dataset["time"] = dataset["time"].dt.floor("D")
+
+        # get list of data variable names
+        var_names = list(dataset.data_vars.keys())
+
+        # Convert the NetCDF dataset to a GeoDataFrame
+        nc_data = dataset.to_dataframe().reset_index()
+        gpd_nc_data = gpd.GeoDataFrame(
+            nc_data,
+            geometry=gpd.points_from_xy(nc_data["longitude"], nc_data["latitude"]),
+            crs=f"EPSG:{CRS}",
+        )
+
+        # merge nc data with NUTS data
+        nc_data_merged = gpd.sjoin(
+            gpd_nc_data, nuts_data, how="inner", predicate="intersects"
+        )
+
+        # drop NaN before grouping
+        nc_data_merged = nc_data_merged[~nc_data_merged["NUTS_ID"].isna()]
+
+        # group by NUTS_ID and time, aggregate using agg_dict
+        invalid_agg_dict = agg_dict is not None and (
+            not isinstance(agg_dict, dict)
+            or not all(
+                isinstance(var, str) and isinstance(func, str)
+                for var, func in agg_dict.items()
+            )
+            or (isinstance(agg_dict, dict) and len(agg_dict) == 0)
+            or not all(var in var_names for var in agg_dict.keys())
+        )
+        if invalid_agg_dict or agg_dict is None:
+            if invalid_agg_dict:
+                warnings.warn(
+                    "Invalid agg_dict provided. Using default aggregation (mean) for all variables.",
+                    UserWarning,
+                )
+            # default aggregation is mean for each variable
+            agg_dict = dict.fromkeys(var_names, "mean")
+            r_var_names = var_names
+        else:
+            # use provided aggregation functions
+            r_var_names = list(agg_dict.keys())
+
+        nc_data_agg = nc_data_merged.groupby(["NUTS_ID", "time"], as_index=False).agg(
+            agg_dict
+        )
+
+    return nc_data_agg, r_var_names
+
+
+def aggregate_data_by_nuts(
+    netcdf_files: dict[str, tuple[Path, dict | None]],
+    nuts_file: Path,
+    normalize_time: bool = True,
+    output_dir: Path | None = None,
+) -> Path:
+    """Aggregate data from a NetCDF file by NUTS regions, data variable names, and time.
+    The aggregated data is saved to a NetCDF file with coordinates "NUTS_ID", "time",
+    and data variables include aggregated data variables.
+
+    Args:
+        netcdf_files (dict[str, tuple[Path, dict | None]]): Dictionary of NetCDF files.
+            Keys are dataset names and values are tuples of (file path, agg_dict).
+            The agg_dict can contain aggregation options for each data variable.
+            For example, {"t2m": "mean", "tp": "sum"}.
+            If agg_dict is None, default aggregation (i.e. mean) is used.
+            NetCDF files must contain "latitude", "longitude", and "time" coordinates.
+        nuts_file (Path): Path to the NUTS regions shape file.
+            The shape file has columns such as "NUTS_ID" and "geometry".
+        normalize_time (bool): If True, normalize time to the beginning of the day.
+            e.g. 2025-10-01T12:00:00 becomes 2025-10-01T00:00:00.
+            Default is True.
+        output_dir (Path | None): Directory to save the aggregated NetCDF file.
+            If None, the output file is saved in the same directory as the NUTS file.
+            Default is None.
+
+    Returns:
+        Path: Path to the aggregated NetCDF file.
+    """
+    if not isinstance(netcdf_files, dict) or not netcdf_files:
+        raise ValueError("netcdf_files must be a non-empty dictionary.")
+
+    for netcdf_file in netcdf_files.values():
+        if not utils.is_non_empty_file(netcdf_file[0]):
+            raise ValueError(
+                f"NetCDF file '{netcdf_file[0]}' is not valid path or empty."
+            )
+    if not utils.is_non_empty_file(nuts_file):
+        raise ValueError("nuts_file must be a valid file path.")
+
+    # load data from the nuts shape file
+    nuts_data = gpd.read_file(nuts_file)
+
+    if "NUTS_ID" not in nuts_data.columns or "geometry" not in nuts_data.columns:
+        raise ValueError(
+            "NUTS_ID and geometry columns must be present in the nuts shape file."
+        )
+
+    # set the base name for the output file
+    out_file_name = nuts_file.stem.replace(
+        ".shp", ""
+    )  # replace .shp (if any) with empty string
+    out_file_name = out_file_name + "_agg"
+
+    # load data from the NetCDF file
+    # merge nuts data with aggregated NetCDF data
+    out_data = nuts_data
+    agg_var_names = []
+    first_merge = True
+    for ds_name, file_info in netcdf_files.items():
+        file_path, agg_dict = file_info
+        print(f"Processing NetCDF file: {file_path}")
+
+        nc_data_agg, r_var_names = _aggregate_netcdf_nuts(
+            nuts_data,
+            file_path,
+            agg_dict,
+            normalize_time=normalize_time,
+        )
+
+        # merge nuts data with aggregated NetCDF data
+        if first_merge:
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID"], how="outer")
+            first_merge = False
+        elif set(nc_data_agg.columns).issubset(set(out_data.columns)):
+            # if the next NetCDF file has the same data variable names,
+            # concat the data and drop duplicates
+            out_data = gpd.GeoDataFrame(
+                pd.concat([out_data, nc_data_agg])
+                .drop_duplicates(subset=["NUTS_ID", "time"], keep="last")
+                .sort_values("NUTS_ID", ignore_index=True),
+                crs=out_data.crs,
+            )
+        else:
+            out_data = out_data.merge(nc_data_agg, on=["NUTS_ID", "time"], how="outer")
+
+        # update the output file name
+        out_file_name += f"_{ds_name}"
+
+        agg_var_names = agg_var_names + [
+            name for name in r_var_names if name not in agg_var_names
+        ]
+
+    # filter the merged data to keep only
+    # NUTS_ID, time, and aggregated data variables
+    out_data_filtered = out_data[["NUTS_ID", "time"] + agg_var_names]
+
+    # convert the GeoDataFrame to a NetCDF file
+    ds_out = out_data_filtered.set_index(["NUTS_ID", "time"]).to_xarray()
+
+    # update out put file name
+    min_time = str(ds_out.time.min().values)[:7]
+    max_time = str(ds_out.time.max().values)[:7]
+    min_max_time = f"{min_time}-{max_time}"
+    out_file_name += f"_{min_max_time}.nc"
+
+    # save the aggregated dataset to a NetCDF file
+    if output_dir is None:
+        output_dir = nuts_file.parent
+    output_file = output_dir / out_file_name
+    ds_out.to_netcdf(output_file, mode="w")
+    print(f"Aggregated data saved to: {output_file}")
+
+    return output_file
