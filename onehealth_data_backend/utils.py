@@ -5,6 +5,7 @@ import jsonschema
 import warnings
 from datetime import datetime
 import socket
+from typing import Dict, Any
 
 
 def is_non_empty_file(file_path: Path) -> bool:
@@ -121,17 +122,19 @@ def save_settings_to_file(settings: dict, dir_path: str = None):
 
 
 def get_settings(
+    source: str = "era5",
     setting_path: str = "default",
     new_settings: dict = {},
     updated_setting_dir: str = None,
     save_updated_settings: bool = True,
-) -> dict:
+) -> Dict[str, Any]:
     """Get the settings for preprocessing steps.
     If the setting path is "default", return the default settings.
     If the setting path is not default, read the settings from the file.
     If the new settings are provided, overwrite the default/loaded settings.
 
     Args:
+        source (str): Source of the data to get corresponding settings.
         setting_path (str): Path to the settings file.
             Defaults to "default".
         new_settings (dict): New settings to overwrite the existing settings.
@@ -141,7 +144,7 @@ def get_settings(
         save_updated_settings (bool): Whether to save the updated settings to a file.
 
     Returns:
-        dict: The settings.
+        Dict[str, Any]: The settings.
     """
     settings = {}
     pkg = resources.files("onehealth_data_backend")

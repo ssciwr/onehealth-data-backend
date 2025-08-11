@@ -1,4 +1,4 @@
-from typing import TypeVar, Union, Callable, Dict, Any, Tuple
+from typing import TypeVar, Union, Callable, Dict, Any, Tuple, Literal
 import xarray as xr
 import numpy as np
 import warnings
@@ -682,7 +682,9 @@ def _apply_preprocessing(
 
 def preprocess_data_file(
     netcdf_file: Path,
-    settings: Dict[str, Any],
+    source: Literal["era5", "isimip"] = "era5",
+    settings: str = "default",
+    new_settings: Dict[str, Any] | None = None,
 ) -> xr.Dataset:
     """Preprocess the dataset based on provided settings.
     Processed data is saved to the same directory with updated filename,
@@ -690,20 +692,30 @@ def preprocess_data_file(
 
     Args:
         netcdf_file (Path): Path to the NetCDF file to preprocess.
-        settings (Dict[str, Any]): Settings for preprocessing.
-
+        source (Literal["era5", "isimip"]): Source of the data.
+            Defaults to "era5".
+        settings (str): Path to the settings file or "default" for default settings.
+        new_settings (Dict[str, Any] | None): Additional settings to override defaults.
     Returns:
         xr.Dataset: Preprocessed dataset.
     """
     if not utils.is_non_empty_file(netcdf_file):
         raise ValueError(f"netcdf_file {netcdf_file} does not exist or is empty.")
 
-    if not settings:
-        raise ValueError("settings must be a non-empty dictionary.")
-
     folder_path = Path(settings.get("output_dir", "data/processed"))
     if not folder_path.exists():
         folder_path.mkdir(parents=True, exist_ok=True)
+
+    # load settings
+    # TODO: generate unique number and pass it to the setting file name
+    settings = utils.get_settings(
+        settings=settings,
+        source=source,
+        new_settings=new_settings,
+        updated_setting_dir=str(folder_path),
+        save_updated_settings=True,
+    )
+
     file_name = netcdf_file.stem
     file_name = file_name[: -len("_raw")] if file_name.endswith("_raw") else file_name
     file_ext = netcdf_file.suffix
