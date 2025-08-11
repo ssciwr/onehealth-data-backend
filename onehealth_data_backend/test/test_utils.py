@@ -30,6 +30,10 @@ def test_is_non_empty_file(tmp_path):
 
 
 def test_is_valid_settings():
+    settings = {"output_dir": "data/processed"}
+    assert utils.is_valid_settings(settings) is True
+    settings = {"output_dir": 1}
+    assert utils.is_valid_settings(settings) is False
     settings = {"adjust_longitude": False}
     assert utils.is_valid_settings(settings) is True
     settings = {"adjust_longitude": "error"}
