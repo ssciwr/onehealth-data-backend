@@ -2,6 +2,11 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
+        "output_dir": {
+            "type": "string",
+            "default": "data/processed",
+            "description": "Directory where processed data will be saved."
+        },
         "adjust_longitude": {
             "type": "boolean",
             "default": true,

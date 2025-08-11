@@ -701,7 +701,9 @@ def preprocess_data_file(
     if not settings:
         raise ValueError("settings must be a non-empty dictionary.")
 
-    folder_path = netcdf_file.parent
+    folder_path = Path(settings.get("output_dir", "data/processed"))
+    if not folder_path.exists():
+        folder_path.mkdir(parents=True, exist_ok=True)
     file_name = netcdf_file.stem
     file_name = file_name[: -len("_raw")] if file_name.endswith("_raw") else file_name
     file_ext = netcdf_file.suffix

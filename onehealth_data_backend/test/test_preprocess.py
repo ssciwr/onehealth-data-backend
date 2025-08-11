@@ -913,6 +913,7 @@ def test_preprocess_data_file(tmp_path, get_dataset):
     get_dataset.to_netcdf(file_path)
 
     settings = {
+        "output_dir": tmp_path,
         "truncate_date": True,
         "truncate_date_from": "2025-01-01",
         "truncate_date_vname": "time",
@@ -937,6 +938,29 @@ def test_preprocess_data_file(tmp_path, get_dataset):
 
     _ = preprocess.preprocess_data_file(file_path, settings)
     assert (tmp_path / "test_data_2025_2025.nc").exists()
+
+
+def test_preprocess_data_file_diff_outdir(tmp_path, get_dataset, tmpdir):
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    settings = {
+        "output_dir": Path(tmpdir) / "data" / "processed",
+        "truncate_date": True,
+        "truncate_date_from": "2025-01-01",
+        "truncate_date_vname": "time",
+    }
+    # preprocess the data file
+    _ = preprocess.preprocess_data_file(file_path, settings=settings)
+
+    # check if there is new file created in the specified output directory
+    # the output dir should be created if it does not exist
+    assert (Path(tmpdir) / "data" / "processed" / "test_data_2025_2025.nc").exists()
+
+    # clean up
+    (Path(tmpdir) / "data" / "processed" / "test_data_2025_2025.nc").unlink()
+    (Path(tmpdir) / "data" / "processed").rmdir()
 
 
 def test_aggregate_netcdf_nuts_invalid(tmp_path, get_dataset, get_nuts_data):
