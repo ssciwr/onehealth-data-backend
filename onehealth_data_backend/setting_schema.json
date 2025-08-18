@@ -82,8 +82,13 @@
         },
         "truncate_date_from": {
             "type": "string",
-            "default": "2020-01-01",
+            "default": "2016-01-01",
             "description": "Date in YYYY-MM-DD to truncate the time series from."
+        },
+        "truncate_date_to": {
+            "type": "string",
+            "default": "2017-12-31",
+            "description": "Date in YYYY-MM-DD to truncate the time series to."
         },
         "truncate_date_vname": {
             "type": "string",
@@ -169,7 +174,7 @@
                 }
             },
             "then": {
-                "required": ["truncate_date_from", "truncate_date_vname"]
+                "required": ["truncate_date_from", "truncate_date_to", "truncate_date_vname"]
             }
         },
         {

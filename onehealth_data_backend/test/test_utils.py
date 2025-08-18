@@ -2,17 +2,8 @@ import pytest
 import json
 from pathlib import Path
 from onehealth_data_backend import utils
-
-
-def get_files(dir_path: Path, name_phrase: str) -> list[Path]:
-    """
-    Get all files in a directory that contain the name_phrase in their name.
-    """
-    return [
-        file
-        for file in dir_path.iterdir()
-        if file.is_file() and name_phrase in file.name
-    ]
+from datetime import datetime
+from conftest import get_files
 
 
 def test_is_non_empty_file(tmp_path):
@@ -130,6 +121,12 @@ def test_is_valid_settings():
     assert utils.is_valid_settings(settings) is False
     settings = {"truncate_date_from": 2025}
     assert utils.is_valid_settings(settings) is False
+    settings = {"truncate_date_to": "2025-02-01"}
+    assert utils.is_valid_settings(settings) is True
+    settings = {"truncate_date_to": 1.5}
+    assert utils.is_valid_settings(settings) is False
+    settings = {"truncate_date_to": 2025}
+    assert utils.is_valid_settings(settings) is False
     settings = {"truncate_date_vname": "test"}
     assert utils.is_valid_settings(settings) is True
     settings = {"truncate_date_vname": 1}
@@ -222,7 +219,7 @@ def test_save_settings_to_file(tmpdir):
 
     # none dir path
     utils.save_settings_to_file(settings)
-    saved_files = get_files(Path.cwd(), "updated_settings_")
+    saved_files = get_files(Path.cwd(), "updated_settings")
     assert len(saved_files) == 1
     with open(saved_files[0], "r", encoding="utf-8") as f:
         updated_settings = json.load(f)
@@ -232,7 +229,7 @@ def test_save_settings_to_file(tmpdir):
     # valid dir path
     directory = Path(tmpdir.mkdir("test"))
     utils.save_settings_to_file(settings, directory)
-    saved_files = get_files(directory, "updated_settings_")
+    saved_files = get_files(directory, "updated_settings")
     assert len(saved_files) == 1
     with open(saved_files[0], "r", encoding="utf-8") as f:
         updated_settings = json.load(f)
@@ -243,58 +240,72 @@ def test_save_settings_to_file(tmpdir):
     with pytest.raises(ValueError):
         utils.save_settings_to_file(settings, file_path)
 
+    # different file name
+    utils.save_settings_to_file(settings, directory, "test_settings.json")
+    saved_files = get_files(directory, "test_settings")
+    assert len(saved_files) == 1
+    with open(saved_files[0], "r", encoding="utf-8") as f:
+        updated_settings = json.load(f)
+    assert updated_settings.get("adjust_longitude") is False
 
-def test_get_settings_default():
-    settings = utils.get_settings()
+
+def test_load_settings_default():
+    settings, _ = utils.load_settings()
     assert settings.get("adjust_longitude") is True
 
-    settings = utils.get_settings("default")
+    settings, fname = utils.load_settings(source="era5", setting_path="default")
     assert settings.get("adjust_longitude") is True
+    assert fname == "era5_settings"
 
 
-def test_get_settings_file(tmp_path):
+def test_load_settings_file(tmp_path):
     setting_path = tmp_path / "settings.json"
 
     # invalid cases
+    # no default settings file
+    with pytest.raises(ValueError):
+        utils.load_settings(source="invalid_source")
+
     # not existing file
     with pytest.warns(UserWarning):
-        settings = utils.get_settings(setting_path)
+        settings, fname = utils.load_settings("era5", setting_path)
     assert settings.get("adjust_longitude") is True
+    assert fname == "era5_settings"
 
     # empty file
     open(setting_path, "w", newline="", encoding="utf-8").close()
     with pytest.warns(UserWarning):
-        settings = utils.get_settings(setting_path)
+        settings, _ = utils.load_settings("era5", setting_path)
     assert settings.get("adjust_longitude") is True
 
     # invalid json file
     with open(setting_path, "w", newline="", encoding="utf-8") as f:
         f.write("test")
     with pytest.warns(UserWarning):
-        settings = utils.get_settings(setting_path)
+        settings, fname = utils.load_settings("era5", setting_path)
     assert settings.get("adjust_longitude") is True
+    assert fname == "era5_settings"
 
     # invalid json file against the schema
     with open(setting_path, "w", newline="", encoding="utf-8") as f:
         json.dump({"test": "test"}, f)
     with pytest.warns(UserWarning):
-        settings = utils.get_settings(setting_path)
+        settings, _ = utils.load_settings("era5", setting_path)
     assert settings.get("adjust_longitude") is True
 
     # valid json file
     with open(setting_path, "w", newline="", encoding="utf-8") as f:
         json.dump({"adjust_longitude": False}, f)
-    settings = utils.get_settings(setting_path)
+    settings, fname = utils.load_settings(setting_path=setting_path)
     assert settings.get("adjust_longitude") is False
+    assert fname == "settings"
 
 
-def test_get_settings_new_settings(tmp_path, tmpdir):
+def test_load_settings_new_settings(tmp_path, tmpdir):
     new_settings = {"adjust_longitude": False}
 
     # update default settings
-    settings = utils.get_settings(
-        new_settings=new_settings, save_updated_settings=False
-    )
+    settings, _ = utils.load_settings(new_settings=new_settings)
     assert settings.get("adjust_longitude") is False
 
     # update settings from file
@@ -308,31 +319,34 @@ def test_get_settings_new_settings(tmp_path, tmpdir):
             },
             f,
         )
-    settings = utils.get_settings(setting_path)
-    assert settings.get("adjust_longitude") is True
-    settings = utils.get_settings(
-        setting_path, new_settings=new_settings, save_updated_settings=False
+    settings, _ = utils.load_settings(setting_path=setting_path)
+    assert settings.get("adjust_longitude_vname") == "test"
+    settings, _ = utils.load_settings(
+        setting_path=setting_path, new_settings=new_settings
     )
     assert settings.get("adjust_longitude") is False
 
     # update settings from file with invalid new settings
     new_settings = {"test": "test"}
     with pytest.warns(UserWarning):
-        settings = utils.get_settings(setting_path, new_settings=new_settings)
+        settings, _ = utils.load_settings(
+            setting_path=setting_path, new_settings=new_settings
+        )
     assert settings.get("adjust_longitude") is True
 
-    # update settings from file, save updated settings
-    new_settings = {"adjust_longitude": False}
-    directory = Path(tmpdir.mkdir("test"))
-    settings = utils.get_settings(
-        setting_path,
-        new_settings=new_settings,
-        updated_setting_dir=directory,
-        save_updated_settings=True,
-    )
-    assert settings.get("adjust_longitude") is False
-    created_files = get_files(directory, "updated_settings_")
-    assert len(created_files) == 1
-    with open(created_files[0], "r", encoding="utf-8") as f:
-        updated_settings = json.load(f)
-    assert updated_settings.get("adjust_longitude") is False
+
+def test_generate_unique_tag():
+    unique_tag = utils.generate_unique_tag()
+    assert isinstance(unique_tag, str)
+    assert (
+        len(unique_tag.split("_")) == 2
+    )  # should be in the format "YYYYMMDD-HHMMSS_hostname"
+
+    # Check if the timestamp is in the correct format
+    datetime_part, hostname_part = unique_tag.split("_")
+    assert "ts" in datetime_part  # should start with "ts"
+    datetime.strptime(datetime_part[2:], "%Y%m%d-%H%M%S")
+
+    # Check if the hostname is a valid string
+    assert "h" in hostname_part  # should start with "h"
+    assert isinstance(hostname_part, str) and len(hostname_part) > 0
