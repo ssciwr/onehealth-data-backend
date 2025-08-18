@@ -3,9 +3,16 @@ from importlib import resources
 import json
 import jsonschema
 import warnings
+from typing import Dict, Any, Tuple
 from datetime import datetime
 import socket
-from typing import Dict, Any
+
+
+pkg = resources.files("onehealth_data_backend")
+DEFAULT_SETTINGS_FILE = {
+    "era5": Path(pkg / "era5_settings.json"),
+    "isimip": Path(pkg / "isimip_settings.json"),
+}
 
 
 def is_non_empty_file(file_path: Path) -> bool:
@@ -86,7 +93,9 @@ def _update_new_settings(settings: dict, new_settings: dict) -> bool:
     return updated
 
 
-def save_settings_to_file(settings: dict, dir_path: str = None):
+def save_settings_to_file(
+    settings: dict, dir_path: str = None, file_name: str = "updated_settings.json"
+) -> None:
     """Save the settings to a file.
     If dir_path is None, save to the current directory.
 
@@ -94,13 +103,9 @@ def save_settings_to_file(settings: dict, dir_path: str = None):
         settings (dict): The settings.
         dir_path (str, optional): The path to save the settings file.
             Defaults to None.
+        file_name (str, optional): The name for the settings file.
+            Defaults to "update_settings.json".
     """
-    now = datetime.now()
-    timestamp = (
-        now.strftime("%Y%m%d_%H%M%S.") + now.strftime("%f")[:3]
-    )  # first 3 digits of milliseconds
-    hostname = socket.gethostname()
-    file_name = "updated_settings_{}_{}.json".format(timestamp, hostname)
     file_path = ""
 
     if dir_path is None:
@@ -121,41 +126,42 @@ def save_settings_to_file(settings: dict, dir_path: str = None):
     print("The settings have been saved to {}".format(file_path))
 
 
-def get_settings(
+def load_settings(
     source: str = "era5",
-    setting_path: str = "default",
-    new_settings: dict = {},
-    updated_setting_dir: str = None,
-    save_updated_settings: bool = True,
+    setting_path: Path | str = "default",
+    new_settings: dict | None = None,
 ) -> Dict[str, Any]:
     """Get the settings for preprocessing steps.
-    If the setting path is "default", return the default settings.
+    If the setting path is "default", return the default settings of the source.
     If the setting path is not default, read the settings from the file.
     If the new settings are provided, overwrite the default/loaded settings.
 
     Args:
         source (str): Source of the data to get corresponding settings.
-        setting_path (str): Path to the settings file.
+        setting_path (Path | str): Path to the settings file.
             Defaults to "default".
-        new_settings (dict): New settings to overwrite the existing settings.
+        new_settings (dict | None): New settings to overwrite the existing settings.
             Defaults to {}.
-        updated_setting_dir (str): Directory to save the updated settings file.
-            Defaults to None.
-        save_updated_settings (bool): Whether to save the updated settings to a file.
 
     Returns:
-        Dict[str, Any]: The settings.
+        Tuple[Dict[str, Any], str]: A tuple containing the settings dictionary
+            and the name of the settings file.
     """
     settings = {}
-    pkg = resources.files("onehealth_data_backend")
-    default_setting_path = Path(pkg / "default_settings.json")
+    settings_fname = ""
+    default_setting_path = DEFAULT_SETTINGS_FILE.get(source)
 
-    def load_json(file_path: Path) -> dict:
+    if not default_setting_path or not is_non_empty_file(default_setting_path):
+        raise ValueError(
+            f"Default settings file for source {source} not found or is empty."
+        )
+
+    def load_json(file_path: Path) -> Tuple[Dict[str, Any], str]:
         with open(file_path, "r", encoding="utf-8") as file:
-            return json.load(file)
+            return json.load(file), file_path.stem
 
     try:
-        settings = (
+        settings, settings_fname = (
             load_json(default_setting_path)
             if setting_path == "default"
             else load_json(Path(setting_path))
@@ -165,18 +171,28 @@ def get_settings(
                 "Invalid settings file. Using default settings instead.",
                 UserWarning,
             )
-            settings = load_json(default_setting_path)
+            settings, settings_fname = load_json(default_setting_path)
     except Exception:
         warnings.warn(
             "Error in loading the settings file. Using default settings instead.",
             UserWarning,
         )
-        settings = load_json(default_setting_path)
+        settings, settings_fname = load_json(default_setting_path)
 
     # update the settings with the new settings
-    updated = _update_new_settings(settings, new_settings)
+    if new_settings and isinstance(new_settings, dict):
+        _update_new_settings(settings, new_settings)
 
-    if updated and save_updated_settings:
-        save_settings_to_file(settings, updated_setting_dir)
+    return settings, settings_fname
 
-    return settings
+
+def generate_unique_tag() -> str:
+    """Generate a unique tag based on the current timestamp and hostname.
+
+    Returns:
+        str: A unique tag in the format "YYYYMMDD-HHMMSS_hostname".
+    """
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d-%H%M%S")
+    hostname = socket.gethostname()
+    return f"ts{timestamp}_h{hostname}"
