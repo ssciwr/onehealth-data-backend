@@ -929,7 +929,7 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
         json.dump(get_simple_settings, f)
 
     # preprocess the data file
-    preprocessed_dataset = preprocess.preprocess_data_file(
+    preprocessed_dataset, pfname = preprocess.preprocess_data_file(
         netcdf_file=file_path,
         source="era5",
         settings=tmp_path / "settings.json",
@@ -940,6 +940,8 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
     # check if the time dimension is reduced
     assert len(preprocessed_dataset["t2m"].time) == 1
     assert len(preprocessed_dataset["tp"].time) == 1
+
+    assert pfname == "test_data_2025_2025_today.nc"
 
     # check if there is new file created
     assert (tmp_path / "test_data_2025_2025_today.nc").exists()
@@ -954,12 +956,13 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
     file_path = tmp_path / "test_data_raw.nc"
     get_dataset.to_netcdf(file_path)
 
-    _ = preprocess.preprocess_data_file(
+    _, pfname = preprocess.preprocess_data_file(
         netcdf_file=file_path,
         settings=tmp_path / "settings.json",
         unique_tag="anotherday",
     )
-    assert (tmp_path / "test_data_2025_2025_anotherday.nc").exists()
+    assert pfname == "test_data_2025_2025_anotherday.nc"
+    assert (tmp_path / pfname).exists()
     assert (tmp_path / "settings_anotherday.json").exists()
 
 
@@ -972,13 +975,14 @@ def test_preprocess_data_file_default_tag(tmp_path, get_dataset, get_simple_sett
         json.dump(get_simple_settings, f)
 
     # preprocess the data file with auto tag
-    _ = preprocess.preprocess_data_file(
+    _, pfname = preprocess.preprocess_data_file(
         netcdf_file=file_path,
         settings=tmp_path / "settings.json",
         unique_tag=None,
     )
 
     prefix_tag = "ts20250818-"
+    assert prefix_tag in pfname
     # file all files with the prefix tag
     files = get_files(tmp_path, name_phrase=prefix_tag)
     assert len(files) == 2  # one for data and one for settings
@@ -997,21 +1001,21 @@ def test_preprocess_data_file_diff_outdir(
         json.dump(settings, f)
 
     # preprocess the data file
-    _ = preprocess.preprocess_data_file(
+    _, pfname = preprocess.preprocess_data_file(
         netcdf_file=file_path,
         settings=tmp_path / "settings.json",
         unique_tag="20250818",
     )
 
+    assert pfname == "test_data_2025_2025_20250818.nc"
+
     # check if there is new file created in the specified output directory
     # the output dir should be created if it does not exist
-    assert (
-        Path(tmpdir) / "data" / "processed" / "test_data_2025_2025_20250818.nc"
-    ).exists()
+    assert (Path(tmpdir) / "data" / "processed" / pfname).exists()
     assert (Path(tmpdir) / "data" / "processed" / "settings_20250818.json").exists()
 
     # clean up
-    (Path(tmpdir) / "data" / "processed" / "test_data_2025_2025_20250818.nc").unlink()
+    (Path(tmpdir) / "data" / "processed" / pfname).unlink()
     (Path(tmpdir) / "data" / "processed" / "settings_20250818.json").unlink()
     (Path(tmpdir) / "data" / "processed").rmdir()
 

@@ -686,7 +686,7 @@ def preprocess_data_file(
     settings: Path | str = "default",
     new_settings: Dict[str, Any] | None = None,
     unique_tag: str | None = None,
-) -> xr.Dataset:
+) -> Tuple[xr.Dataset, str]:
     """Preprocess the dataset based on provided settings.
     If the settings path is "default", use the default settings of the source.
     The settings and preprocessed files are saved in the directory,
@@ -703,7 +703,8 @@ def preprocess_data_file(
             and settings file.
             Defaults to None.
     Returns:
-        xr.Dataset: Preprocessed dataset.
+        Tuple[xr.Dataset, str]: Preprocessed dataset and
+            the name of the preprocessed file.
     """
     if not utils.is_non_empty_file(netcdf_file):
         raise ValueError(f"NetCDF file {netcdf_file} does not exist or is empty.")
@@ -736,7 +737,7 @@ def preprocess_data_file(
         output_file = folder_path / f"{file_name_base}_{unique_tag}{file_ext}"
         dataset.to_netcdf(output_file, mode="w", format="NETCDF4")
         print(f"Processed dataset saved to: {output_file}")
-        return dataset
+        return dataset, str(output_file.name)
 
 
 def _aggregate_netcdf_nuts(
