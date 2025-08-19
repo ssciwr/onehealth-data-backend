@@ -983,7 +983,7 @@ def test_preprocess_data_file_default_tag(tmp_path, get_dataset, get_simple_sett
     )
 
     now = datetime.now()
-    prefix_tag = f"ts{now.strftime("%Y%m%d")}-"
+    prefix_tag = f"ts{now.strftime('%Y%m%d')}-"
     assert prefix_tag in pfname
     # file all files with the prefix tag
     files = get_files(tmp_path, name_phrase=prefix_tag)
