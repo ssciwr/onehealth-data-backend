@@ -7,6 +7,7 @@ from shapely.geometry import Polygon
 from pathlib import Path
 from conftest import get_files
 import json
+from datetime import datetime
 
 
 @pytest.fixture()
@@ -981,7 +982,8 @@ def test_preprocess_data_file_default_tag(tmp_path, get_dataset, get_simple_sett
         unique_tag=None,
     )
 
-    prefix_tag = "ts20250818-"
+    now = datetime.now()
+    prefix_tag = f"ts{now.strftime("%Y%m%d")}-"
     assert prefix_tag in pfname
     # file all files with the prefix tag
     files = get_files(tmp_path, name_phrase=prefix_tag)
