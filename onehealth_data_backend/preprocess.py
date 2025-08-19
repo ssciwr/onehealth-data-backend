@@ -731,7 +731,7 @@ def preprocess_data_file(
     file_name = file_name[: -len("_raw")] if file_name.endswith("_raw") else file_name
     file_ext = netcdf_file.suffix
 
-    with xr.open_dataset(netcdf_file) as dataset:
+    with xr.open_dataset(netcdf_file, chunks={}) as dataset:
         dataset, file_name_base = _apply_preprocessing(dataset, file_name, settings)
         # save the processed dataset
         output_file = folder_path / f"{file_name_base}_{unique_tag}{file_ext}"
