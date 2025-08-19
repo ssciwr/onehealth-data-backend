@@ -104,7 +104,7 @@ def save_settings_to_file(
         dir_path (str, optional): The path to save the settings file.
             Defaults to None.
         file_name (str, optional): The name for the settings file.
-            Defaults to "update_settings.json".
+            Defaults to "updated_settings.json".
     """
     file_path = ""
 
@@ -130,7 +130,7 @@ def load_settings(
     source: str = "era5",
     setting_path: Path | str = "default",
     new_settings: dict | None = None,
-) -> Dict[str, Any]:
+) -> Tuple[Dict[str, Any], str]:
     """Get the settings for preprocessing steps.
     If the setting path is "default", return the default settings of the source.
     If the setting path is not default, read the settings from the file.
