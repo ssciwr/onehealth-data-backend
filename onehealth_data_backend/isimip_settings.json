@@ -1,5 +1,5 @@
 {
-    "output_dir": "data/processed",
+    "output_dir": "../../../data/processed",
     "truncate_date": true,
     "truncate_date_from": "2016-01-01",
     "truncate_date_to": "2017-12-31",
