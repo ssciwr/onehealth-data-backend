@@ -506,8 +506,8 @@ def _parse_date(date: str | np.datetime64 | None) -> np.datetime64 | None:
             raise ValueError("Date string must be in the format 'YYYY-MM-DD'.")
         try:
             date = np.datetime64(date, "ns")
-        except ValueError:
-            raise ValueError("Invalid date format.")
+        except ValueError as e:
+            raise ValueError(f"Invalid date value. Error: {e}")
 
     if not isinstance(date, np.datetime64):
         raise ValueError("Date must be of type string, np.datetime64, or None.")
