@@ -212,3 +212,4 @@ __marimo__/
 # data files
 data/in/*
 data/out/*
+data/processed/*
