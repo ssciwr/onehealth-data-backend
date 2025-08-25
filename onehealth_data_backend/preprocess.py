@@ -6,6 +6,7 @@ from pathlib import Path
 from onehealth_data_backend import utils
 import geopandas as gpd
 import pandas as pd
+import re
 
 
 T = TypeVar("T", bound=Union[np.float64, xr.DataArray])
@@ -485,25 +486,72 @@ def resample_resolution(
     )
 
 
-def truncate_data_from_time(
+def _parse_date(date: str | np.datetime64 | None) -> np.datetime64 | None:
+    """Parse a date from string or numpy datetime64 to numpy datetime64.
+    If the input is None, return None.
+
+    Args:
+        date (str | np.datetime64 | None): Date to parse.
+            The string should be in the format "YYYY-MM-DD".
+
+    Returns:
+        np.datetime64 | None: Parsed date as numpy datetime64 or None.
+    """
+    if date is None:
+        return None
+
+    date_pattern = r"^\d{4}-\d{2}-\d{2}$"
+    if isinstance(date, str):
+        if not re.match(date_pattern, date):
+            raise ValueError("Date string must be in the format 'YYYY-MM-DD'.")
+        try:
+            date = np.datetime64(date, "ns")
+        except ValueError:
+            raise ValueError("Invalid date format.")
+
+    if not isinstance(date, np.datetime64):
+        raise ValueError("Date must be of type string, np.datetime64, or None.")
+
+    return date
+
+
+def truncate_data_by_time(
     dataset: xr.Dataset,
     start_date: Union[str, np.datetime64],
+    end_date: Union[str, np.datetime64, None] = None,
     var_name: str = "time",
 ) -> xr.Dataset:
-    """Truncate data from a specific start date.
+    """Truncate data from a specific start date to an end date. Both dates are inclusive.
 
     Args:
         dataset (xr.Dataset): Dataset to truncate.
         start_date (Union[str, np.datetime64]): Start date for truncation.
             Format as "YYYY-MM-DD" or as a numpy datetime64 object.
+        end_date (Union[str, np.datetime64, None]): End date for truncation.
+            Format as "YYYY-MM-DD" or as a numpy datetime64 object.
+            If None, truncate until the last date in the dataset. Default is None.
         var_name (str): Name of the time variable in the dataset. Default is "time".
 
     Returns:
         xr.Dataset: Dataset truncated from the specified start date.
     """
-    end_date = dataset[var_name].max().values
-    if isinstance(start_date, str):
-        start_date = np.datetime64(start_date, "ns")
+    start_date = _parse_date(start_date)
+    end_date = _parse_date(end_date)
+
+    if start_date is None:
+        raise ValueError("Start date must be provided and cannot be None.")
+
+    if var_name not in dataset.data_vars and var_name not in dataset.coords:
+        raise ValueError(f"The variable '{var_name}' not found in the dataset.")
+
+    if end_date is None:
+        end_date = dataset[var_name].max().values
+
+    if start_date > end_date:
+        raise ValueError(
+            "The start date must be earlier than or equal to the end date."
+        )
+
     return dataset.sel({var_name: slice(start_date, end_date)})
 
 
@@ -571,6 +619,7 @@ def _apply_preprocessing(
 
     truncate_date = settings.get("truncate_date", False)
     truncate_date_from = settings.get("truncate_date_from")
+    truncate_date_to = settings.get("truncate_date_to")
     truncate_date_vname = settings.get("truncate_date_vname")
 
     if unify_coords:
@@ -618,8 +667,11 @@ def _apply_preprocessing(
 
     if truncate_date and truncate_date_vname in dataset.coords:
         print("Truncating data from a specific start date...")
-        dataset = truncate_data_from_time(
-            dataset, start_date=truncate_date_from, var_name=truncate_date_vname
+        dataset = truncate_data_by_time(
+            dataset,
+            start_date=truncate_date_from,
+            end_date=truncate_date_to,
+            var_name=truncate_date_vname,
         )
         max_time = dataset[truncate_date_vname].max().values
         max_year = np.datetime64(max_time, "Y")
