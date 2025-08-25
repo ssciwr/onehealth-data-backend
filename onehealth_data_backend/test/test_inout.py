@@ -75,6 +75,8 @@ def test_get_filename_var():
         "netcdf",
         ["2025"],
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         ["2m_temperature"],
@@ -99,17 +101,21 @@ def test_get_filename_var():
             "11",
             "12",
         ],
+        None,
+        None,
         True,
         "era5_data",
         ["2m_temperature"],
     )
-    assert file_name == "era5_data_2025_all_2t_monthly_area_raw.nc"
+    assert file_name == "era5_data_2025_allm_2t_monthly_area_raw.nc"
 
     file_name = inout.get_filename(
         "reanalysis-era5-land",
         "netcdf",
         ["2025"],
         ["01"],
+        None,
+        None,
         True,
         "era5_data",
         ["2m_temperature"],
@@ -121,6 +127,8 @@ def test_get_filename_var():
         "netcdf",
         ["2025"],
         ["01", "02"],
+        None,
+        None,
         False,
         "era5_data",
         ["2m_temperature"],
@@ -132,6 +140,8 @@ def test_get_filename_var():
         "grib",
         ["2025"],
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         ["2m_temperature"],
@@ -145,6 +155,8 @@ def test_get_filename_vars():
         "netcdf",
         ["2025"],
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         ["2m_temperature", "total_precipitation"],
@@ -172,6 +184,8 @@ def test_get_filename_long():
         "netcdf",
         ["2025"],
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         var_names,
@@ -185,6 +199,8 @@ def test_get_filename_long():
         "netcdf",
         years,
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         var_names,
@@ -197,6 +213,8 @@ def test_get_filename_long():
         "netcdf",
         ["2020", "2023", "2021"],
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         var_names,
@@ -210,6 +228,8 @@ def test_get_filename_long():
         "netcdf",
         years,
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data",
         var_names,
@@ -226,6 +246,8 @@ def test_get_filename_long():
         "netcdf",
         years,
         ["01", "02"],
+        None,
+        None,
         True,
         "era5_data_plus_something_very_long_to_make_the_name_longer_than_100_chars",
         var_names,
@@ -235,3 +257,8 @@ def test_get_filename_long():
         == "era5_data_plus_something_very_long_to_make_the_name_longer_than_100_chars_"
         "1900_2029_01_02_2t_etc_mon_etc_raw.nc"
     )
+
+
+def test_get_filename_none_cases():
+    # TODO
+    pass
