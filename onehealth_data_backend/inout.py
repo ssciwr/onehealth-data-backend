@@ -161,7 +161,7 @@ def get_filename(
     def format_ds_type(ds_name: str, time_str: str) -> str:
         """Format dataset type based on dataset name.
         If 'monthly' is in the dataset name, return 'monthly'.
-        if 'monthly' is not in the dataset name and time_str is 'midnight',
+        if 'monthly' is not in the dataset name and time_str is '_midnight',
             return 'daily'.
         Otherwise, return empty string.
         """
