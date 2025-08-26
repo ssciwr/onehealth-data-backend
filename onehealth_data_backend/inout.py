@@ -76,8 +76,8 @@ def get_filename(
         str: Generated file name.
     """
 
-    def format_ymd(numbers: List[str] | None) -> str:
-        """Format years, months, or days into a string representation.
+    def format_ymdt(numbers: List[str] | None) -> str:
+        """Format years, months, days or times into a string representation.
         If numbers is None, return empty string.
         If numbers are continuous, return start and end values (e.g., '01_12').
         If more than 5 numbers, return first 5 numbers followed by '_etc'.
@@ -91,7 +91,7 @@ def get_filename(
             len(num_list) > 1
         )
         if are_continuous:
-            return f"{min(num_list):02d}_{max(num_list):02d}"
+            return f"{min(num_list):02d}-{max(num_list):02d}"
         elif len(num_list) > 5:
             return "_".join(f"{n:02d}" for n in num_list[:5]) + "_etc"
         else:
@@ -110,7 +110,7 @@ def get_filename(
         elif len(set(months)) == 12:
             return "allm"
         else:
-            return format_ymd(months)
+            return format_ymdt(months)
 
     def format_days(days: List[str] | None) -> str:
         """Format days into a string representation.
@@ -125,7 +125,7 @@ def get_filename(
         elif len(set(days)) == 31:  # TODO how about month with 30 or 28 days?
             return "alld"
         else:
-            return format_ymd(days)
+            return format_ymdt(days)
 
     def format_times(times: List[str] | None) -> str:
         """Format times into a string representation.
@@ -141,10 +141,8 @@ def get_filename(
             return "midnight"
         elif len(set(times)) == 24:
             return "allt"
-        elif len(times) > 5:
-            return "_".join(times[:5]) + "_etc"
         else:
-            return "_".join(times)
+            return format_ymdt([t.split(":")[0] for t in times])
 
     def format_variables(variables: List[str]) -> str:
         """Format variables into a string representation.
@@ -169,7 +167,7 @@ def get_filename(
         """
         if "monthly" in ds_name:
             return "monthly"
-        elif time_str == "midnight":
+        elif time_str == "_midnight":
             return "daily"
         else:
             return ""
@@ -199,7 +197,7 @@ def get_filename(
         """Truncate a string to a maximum length, adding '_etc' if truncated."""
         return s if len(s) <= max_length else s[:max_length] + "_etc"
 
-    year_str = add_prefix_if_not_empty(format_ymd(years))
+    year_str = add_prefix_if_not_empty(format_ymdt(years))
     month_str = add_prefix_if_not_empty(format_months(months))
     day_str = add_prefix_if_not_empty(format_days(days))
     time_str = add_prefix_if_not_empty(format_times(times))

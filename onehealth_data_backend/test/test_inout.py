@@ -81,7 +81,7 @@ def test_get_filename_var():
         "era5_data",
         ["2m_temperature"],
     )
-    assert file_name == "era5_data_2025_01_02_2t_monthly_area_raw.nc"
+    assert file_name == "era5_data_2025_01-02_2t_monthly_area_raw.nc"
 
     file_name = inout.get_filename(
         "reanalysis-era5-land-monthly-means",
@@ -133,7 +133,7 @@ def test_get_filename_var():
         "era5_data",
         ["2m_temperature"],
     )
-    assert file_name == "era5_data_2025_01_02_2t_raw.nc"
+    assert file_name == "era5_data_2025_01-02_2t_raw.nc"
 
     file_name = inout.get_filename(
         "reanalysis-era5-land",
@@ -146,7 +146,7 @@ def test_get_filename_var():
         "era5_data",
         ["2m_temperature"],
     )
-    assert file_name == "era5_data_2025_01_02_2t_area_raw.grib"
+    assert file_name == "era5_data_2025_01-02_2t_area_raw.grib"
 
 
 def test_get_filename_vars():
@@ -161,7 +161,7 @@ def test_get_filename_vars():
         "era5_data",
         ["2m_temperature", "total_precipitation"],
     )
-    assert file_name == "era5_data_2025_01_02_2t_tp_monthly_area_raw.nc"
+    assert file_name == "era5_data_2025_01-02_2t_tp_monthly_area_raw.nc"
 
 
 def test_get_filename_long():
@@ -190,7 +190,7 @@ def test_get_filename_long():
         "era5_data",
         var_names,
     )
-    assert file_name == "era5_data_2025_01_02_2t_etc_monthly_area_raw.nc"
+    assert file_name == "era5_data_2025_01-02_2t_etc_monthly_area_raw.nc"
 
     # long years and long vars
     years = [str(i) for i in range(1900, 2030)]
@@ -205,7 +205,7 @@ def test_get_filename_long():
         "era5_data",
         var_names,
     )
-    assert file_name == "era5_data_1900_2029_01_02_2t_etc_monthly_area_raw.nc"
+    assert file_name == "era5_data_1900-2029_01-02_2t_etc_monthly_area_raw.nc"
 
     # non-continuous years and long vars
     file_name = inout.get_filename(
@@ -219,7 +219,7 @@ def test_get_filename_long():
         "era5_data",
         var_names,
     )
-    assert file_name == "era5_data_2020_2021_2023_01_02_2t_etc_monthly_area_raw.nc"
+    assert file_name == "era5_data_2020_2021_2023_01-02_2t_etc_monthly_area_raw.nc"
 
     # non-continuous years with more than 5 years
     years = [str(i) for i in range(2020, 2040, 2)]
@@ -236,7 +236,7 @@ def test_get_filename_long():
     )
     assert (
         file_name
-        == "era5_data_2020_2022_2024_2026_2028_etc_01_02_2t_etc_monthly_area_raw.nc"
+        == "era5_data_2020_2022_2024_2026_2028_etc_01-02_2t_etc_monthly_area_raw.nc"
     )
 
     # more than 100 chars
@@ -255,10 +255,89 @@ def test_get_filename_long():
     assert (
         file_name
         == "era5_data_plus_something_very_long_to_make_the_name_longer_than_100_chars_"
-        "1900_2029_01_02_2t_etc_mon_etc_raw.nc"
+        "1900-2029_01-02_2t_etc_mon_etc_raw.nc"
     )
 
 
 def test_get_filename_none_cases():
-    # TODO
-    pass
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land-monthly-means",
+        data_format="netcdf",
+        years=None,
+        months=None,
+        days=None,
+        times=None,
+        has_area=False,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert file_name == "era5_data_2t_monthly_raw.nc"
+
+
+def test_get_filename_days_times_dstype():
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land",
+        data_format="netcdf",
+        years=["2025"],
+        months=["01"],
+        days=[str(i).zfill(2) for i in range(1, 32)],
+        times=[f"{str(i).zfill(2)}:00" for i in range(0, 24)],
+        has_area=False,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert file_name == "era5_data_2025_01_alld_allt_2t_raw.nc"
+
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land",
+        data_format="netcdf",
+        years=["2025"],
+        months=["01"],
+        days=[str(i).zfill(2) for i in range(1, 11)],
+        times=[f"{str(i).zfill(2)}:00" for i in range(0, 11)],
+        has_area=False,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert file_name == "era5_data_2025_01_01-10_00-10_2t_raw.nc"
+
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land",
+        data_format="netcdf",
+        years=["2025"],
+        months=["01"],
+        days=["01", "05"],
+        times=["00:00", "02:00"],
+        has_area=False,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert file_name == "era5_data_2025_01_01_05_00_02_2t_raw.nc"
+
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land",
+        data_format="netcdf",
+        years=["2025"],
+        months=["01"],
+        days=["01", "05", "10", "15", "20", "25"],
+        times=["00:00", "02:00", "04:00", "06:00", "08:00", "10:00"],
+        has_area=False,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert (
+        file_name == "era5_data_2025_01_01_05_10_15_20_etc_00_02_04_06_08_etc_2t_raw.nc"
+    )
+
+    file_name = inout.get_filename(
+        ds_name="reanalysis-era5-land",
+        data_format="netcdf",
+        years=["2025"],
+        months=["01"],
+        days=[str(i).zfill(2) for i in range(1, 32)],
+        times=["00:00"],
+        has_area=True,
+        base_name="era5_data",
+        variables=["2m_temperature"],
+    )
+    assert file_name == "era5_data_2025_01_alld_midnight_2t_daily_area_raw.nc"
