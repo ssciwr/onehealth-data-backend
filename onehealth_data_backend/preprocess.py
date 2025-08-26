@@ -1,4 +1,4 @@
-from typing import TypeVar, Union, Callable, Dict, Any, Tuple
+from typing import TypeVar, Union, Callable, Dict, Any, Tuple, Literal
 import xarray as xr
 import numpy as np
 import warnings
@@ -483,6 +483,42 @@ def resample_resolution(
         lon_name=lon_name,
         method_map=method_map,
     )
+
+
+def shift_time(
+    dataset: xr.Dataset,
+    offset: int = -1,
+    time_unit: Literal["W", "D", "h", "m", "s", "ms", "ns"] = "D",
+    var_name: str = "time",
+) -> xr.Dataset:
+    """Shift the time coordinate of a dataset by a specified timedelta.
+
+    Args:
+        dataset (xr.Dataset): Dataset to shift.
+        offset (int): Amount to shift the time coordinate. Default is -1.
+        time_unit (Literal["W", "D", "h", "m", "s", "ms", "ns"]):
+            Time unit for the shift. Default is "D".
+        var_name (str): Name of the time variable in the dataset. Default is "time".
+
+    Returns:
+        xr.Dataset: Dataset with shifted time coordinate.
+    """
+    if var_name not in dataset.coords:
+        raise ValueError(f"Coordinate '{var_name}' not found in dataset.")
+
+    if not isinstance(offset, int):
+        raise ValueError("Offset value must be an int.")
+
+    if time_unit not in ["W", "D", "h", "m", "s", "ms", "ns"]:
+        raise ValueError(
+            "time_unit must be one of 'W', 'D', 'h', 'm', 's', 'ms', or 'ns'."
+        )
+
+    dataset = dataset.copy()
+    dataset[var_name] = dataset[var_name] + np.timedelta64(offset, time_unit).astype(
+        "timedelta64[ns]"
+    )
+    return dataset
 
 
 def truncate_data_from_time(
