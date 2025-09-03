@@ -2,7 +2,7 @@ pre-commit
 pytest
 nbstripout
 mkdocs-material==9.6.18
-mkdocs-include-markdown-plugin==7.1.6
+mkdocs-include-markdown-plugin==7.1.7
 mkdocs-glightbox==0.4.0
 mkdocstrings-python==1.17.0
 mkdocs-jupyter==0.25.1
