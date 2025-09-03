@@ -628,10 +628,47 @@ def test_resample_resolution_default(get_dataset):
     assert np.allclose(tp_interp.values, tp_expected.values)
 
 
-def test_truncate_data_from_time(get_dataset):
-    # truncate data from time
-    truncated_dataset = preprocess.truncate_data_from_time(
-        get_dataset, start_date="2025-01-01"
+def test_parse_date_invalid():
+    with pytest.raises(ValueError):
+        preprocess._parse_date(date="invalid_date")
+
+    with pytest.raises(ValueError):
+        preprocess._parse_date(date="2024-13-01")
+
+    with pytest.raises(ValueError):
+        preprocess._parse_date(date=12345)
+
+
+def test_parse_date():
+    date_str = "2024-07-15"
+    parsed_date = preprocess._parse_date(date_str)
+    expected_date = np.datetime64("2024-07-15")
+    assert parsed_date == expected_date
+
+    date_np = np.datetime64("2025-12-31")
+    parsed_date = preprocess._parse_date(date_np)
+    assert parsed_date == date_np
+
+
+def test_truncate_data_by_time_invalid(get_dataset):
+    with pytest.raises(ValueError):
+        preprocess.truncate_data_by_time(
+            get_dataset, start_date=None, end_date=None, var_name="time"
+        )
+    with pytest.raises(ValueError):
+        preprocess.truncate_data_by_time(
+            get_dataset, start_date="2025-01-01", end_date="2024-01-01", var_name="time"
+        )
+    with pytest.raises(ValueError):
+        preprocess.truncate_data_by_time(
+            get_dataset, start_date="2025-01-01", end_date=None, var_name="invalid_var"
+        )
+
+
+def test_truncate_data_by_time(get_dataset):
+    # truncate data by time
+    truncated_dataset = preprocess.truncate_data_by_time(
+        get_dataset, start_date="2025-01-01", end_date="2025-01-01", var_name="time"
     )
 
     # check if the time dimension is reduced
@@ -647,8 +684,11 @@ def test_truncate_data_from_time(get_dataset):
     )
 
     # start date as np.datetime64
-    truncated_dataset = preprocess.truncate_data_from_time(
-        get_dataset, start_date=np.datetime64("2025-01-01")
+    truncated_dataset = preprocess.truncate_data_by_time(
+        get_dataset,
+        start_date=np.datetime64("2025-01-01"),
+        end_date=np.datetime64("2025-01-01"),
+        var_name="time",
     )
 
     assert np.allclose(
@@ -659,8 +699,21 @@ def test_truncate_data_from_time(get_dataset):
     )
 
     # random start date
-    truncated_dataset = preprocess.truncate_data_from_time(
-        get_dataset, start_date=np.datetime64("2024-07-17")
+    truncated_dataset = preprocess.truncate_data_by_time(
+        get_dataset,
+        start_date=np.datetime64("2024-07-17"),
+        end_date=np.datetime64("2025-01-01"),
+        var_name="time",
+    )
+    assert len(truncated_dataset["t2m"].time) == 1
+    assert truncated_dataset["t2m"].time.values[0] == np.datetime64("2025-01-01")
+
+    # None end date
+    truncated_dataset = preprocess.truncate_data_by_time(
+        get_dataset,
+        start_date=np.datetime64("2025-01-01"),
+        end_date=None,
+        var_name="time",
     )
     assert len(truncated_dataset["t2m"].time) == 1
     assert truncated_dataset["t2m"].time.values[0] == np.datetime64("2025-01-01")
@@ -814,6 +867,7 @@ def test_apply_preprocessing_truncate(get_dataset):
     settings = {
         "truncate_date": True,
         "truncate_date_from": "2025-01-01",
+        "truncate_date_to": "2025-01-01",
         "truncate_date_vname": "time",
     }
     # preprocess the data file
