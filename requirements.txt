@@ -7,3 +7,4 @@ matplotlib
 geopandas
 dask[complete]
 scipy
+isimip-client
