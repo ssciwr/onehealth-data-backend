@@ -673,9 +673,13 @@ def _apply_preprocessing(
             end_date=truncate_date_to,
             var_name=truncate_date_vname,
         )
+
+        min_year = truncate_date_from[:4]
         max_time = dataset[truncate_date_vname].max().values
-        max_year = np.datetime64(max_time, "Y")
-        file_name_base += f"_{truncate_date_from[:4]}_{max_year}"
+        max_year = (
+            truncate_date_to[:4] if truncate_date_to else np.datetime64(max_time, "Y")
+        )
+        file_name_base += f"_{min_year}-{max_year}"
 
     return dataset, file_name_base
 

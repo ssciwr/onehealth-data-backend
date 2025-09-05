@@ -867,12 +867,33 @@ def test_apply_preprocessing_upsample(get_dataset):
 def test_apply_preprocessing_truncate(get_dataset):
     fname_base = "test_data"
 
+    # case where end year is max year
     settings = {
         "truncate_date": True,
-        "truncate_date_from": "2025-01-01",
+        "truncate_date_from": "2024-01-01",
         "truncate_date_to": "2025-01-01",
         "truncate_date_vname": "time",
     }
+    # preprocess the data file
+    preprocessed_dataset, updated_fname = preprocess._apply_preprocessing(
+        get_dataset, fname_base, settings=settings
+    )
+
+    # check if the time dimension is retained
+    assert len(preprocessed_dataset["t2m"].time) == 2
+    assert len(preprocessed_dataset["tp"].time) == 2
+
+    # check if file name is updated
+    assert updated_fname == f"{fname_base}_2024-2025"
+
+    # case where end year < max year
+    settings = {
+        "truncate_date": True,
+        "truncate_date_from": "2024-01-01",
+        "truncate_date_to": "2024-01-01",
+        "truncate_date_vname": "time",
+    }
+
     # preprocess the data file
     preprocessed_dataset, updated_fname = preprocess._apply_preprocessing(
         get_dataset, fname_base, settings=settings
@@ -883,7 +904,27 @@ def test_apply_preprocessing_truncate(get_dataset):
     assert len(preprocessed_dataset["tp"].time) == 1
 
     # check if file name is updated
-    assert updated_fname == f"{fname_base}_2025_2025"
+    assert updated_fname == f"{fname_base}_2024-2024"
+
+    # case where end year is None
+    settings = {
+        "truncate_date": True,
+        "truncate_date_from": "2025-01-01",
+        "truncate_date_to": None,
+        "truncate_date_vname": "time",
+    }
+
+    # preprocess the data file
+    preprocessed_dataset, updated_fname = preprocess._apply_preprocessing(
+        get_dataset, fname_base, settings=settings
+    )
+
+    # check if the time dimension is reduced
+    assert len(preprocessed_dataset["t2m"].time) == 1
+    assert len(preprocessed_dataset["tp"].time) == 1
+
+    # check if file name is updated
+    assert updated_fname == f"{fname_base}_2025-2025"
 
 
 def test_preprocess_data_file_invalid(tmp_path):
@@ -945,15 +986,15 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
     assert pfname == "test_data_2025_2025_today.nc"
 
     # check if there is new file created
-    assert (tmp_path / "test_data_2025_2025_today.nc").exists()
-    with xr.open_dataset(tmp_path / "test_data_2025_2025_today.nc") as ds:
+    assert (tmp_path / "test_data_2025-2025_today.nc").exists()
+    with xr.open_dataset(tmp_path / "test_data_2025-2025_today.nc") as ds:
         assert len(ds["t2m"].time) == 1
         assert len(ds["tp"].time) == 1
     # check if the settings file is also saved
     assert (tmp_path / "settings_today.json").exists()
 
     # check when file name ends with raw
-    (tmp_path / "test_data_2025_2025_today.nc").unlink()
+    (tmp_path / "test_data_2025-2025_today.nc").unlink()
     file_path = tmp_path / "test_data_raw.nc"
     get_dataset.to_netcdf(file_path)
 
@@ -962,7 +1003,7 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
         settings=tmp_path / "settings.json",
         unique_tag="anotherday",
     )
-    assert pfname == "test_data_2025_2025_anotherday.nc"
+    assert pfname == "test_data_2025-2025_anotherday.nc"
     assert (tmp_path / pfname).exists()
     assert (tmp_path / "settings_anotherday.json").exists()
 
@@ -1009,7 +1050,7 @@ def test_preprocess_data_file_diff_outdir(
         unique_tag="20250818",
     )
 
-    assert pfname == "test_data_2025_2025_20250818.nc"
+    assert pfname == "test_data_2025-2025_20250818.nc"
 
     # check if there is new file created in the specified output directory
     # the output dir should be created if it does not exist
