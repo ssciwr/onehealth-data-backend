@@ -983,7 +983,7 @@ def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
     assert len(preprocessed_dataset["t2m"].time) == 1
     assert len(preprocessed_dataset["tp"].time) == 1
 
-    assert pfname == "test_data_2025_2025_today.nc"
+    assert pfname == "test_data_2025-2025_today.nc"
 
     # check if there is new file created
     assert (tmp_path / "test_data_2025-2025_today.nc").exists()
