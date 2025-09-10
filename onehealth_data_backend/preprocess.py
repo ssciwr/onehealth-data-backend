@@ -722,37 +722,62 @@ def _apply_preprocessing(
 
 def preprocess_data_file(
     netcdf_file: Path,
-    settings: Dict[str, Any],
-) -> xr.Dataset:
+    source: Literal["era5", "isimip"] = "era5",
+    settings: Path | str = "default",
+    new_settings: Dict[str, Any] | None = None,
+    unique_tag: str | None = None,
+) -> Tuple[xr.Dataset, str]:
     """Preprocess the dataset based on provided settings.
-    Processed data is saved to the same directory with updated filename,
-    defined by the settings.
+    If the settings path is "default", use the default settings of the source.
+    The settings and preprocessed files are saved in the directory,
+    which is specified by the settings file and unique number.
 
     Args:
         netcdf_file (Path): Path to the NetCDF file to preprocess.
-        settings (Dict[str, Any]): Settings for preprocessing.
-
+        source (Literal["era5", "isimip"]): Source of the data.
+            Defaults to "era5".
+        settings (Path | str): Path to the settings file or "default" for default settings.
+        new_settings (Dict[str, Any] | None): Additional settings to overwrite defaults.
+            Defaults to None.
+        unique_tag (str | None): Unique tag to append to the output file name
+            and settings file.
+            Defaults to None.
     Returns:
-        xr.Dataset: Preprocessed dataset.
+        Tuple[xr.Dataset, str]: Preprocessed dataset and
+            the name of the preprocessed file.
     """
     if not utils.is_non_empty_file(netcdf_file):
-        raise ValueError(f"netcdf_file {netcdf_file} does not exist or is empty.")
+        raise ValueError(f"NetCDF file {netcdf_file} does not exist or is empty.")
 
-    if not settings:
-        raise ValueError("settings must be a non-empty dictionary.")
+    # generate unique tag for the settings file and output file
+    if unique_tag is None or not unique_tag:
+        unique_tag = utils.generate_unique_tag()
 
-    folder_path = netcdf_file.parent
+    # load settings
+    settings, settings_fname = utils.load_settings(
+        source=source, setting_path=settings, new_settings=new_settings
+    )
+
+    folder_path = Path(settings.get("output_dir", "data/processed"))
+    if not folder_path.exists():
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+    # save settings to a file
+    settings_fname_w_tag = f"{settings_fname}_{unique_tag}.json"
+    utils.save_settings_to_file(settings, folder_path, settings_fname_w_tag)
+
+    # prepare to preprocess NetCDF file
     file_name = netcdf_file.stem
     file_name = file_name[: -len("_raw")] if file_name.endswith("_raw") else file_name
     file_ext = netcdf_file.suffix
 
-    with xr.open_dataset(netcdf_file) as dataset:
+    with xr.open_dataset(netcdf_file, chunks={}) as dataset:
         dataset, file_name_base = _apply_preprocessing(dataset, file_name, settings)
         # save the processed dataset
-        output_file = folder_path / f"{file_name_base}{file_ext}"
+        output_file = folder_path / f"{file_name_base}_{unique_tag}{file_ext}"
         dataset.to_netcdf(output_file, mode="w", format="NETCDF4")
         print(f"Processed dataset saved to: {output_file}")
-        return dataset
+        return dataset, str(output_file.name)
 
 
 def _aggregate_netcdf_nuts(

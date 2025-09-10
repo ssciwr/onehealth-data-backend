@@ -5,6 +5,9 @@ from onehealth_data_backend import preprocess
 import geopandas as gpd
 from shapely.geometry import Polygon
 from pathlib import Path
+from conftest import get_files
+import json
+from datetime import datetime
 
 
 @pytest.fixture()
@@ -977,58 +980,137 @@ def test_apply_preprocessing_truncate(get_dataset):
 def test_preprocess_data_file_invalid(tmp_path):
     # invalid file path
     with pytest.raises(ValueError):
-        preprocess.preprocess_data_file("", settings={"test": "test"})
+        preprocess.preprocess_data_file("", settings="default")
 
     # non-existing file
     with pytest.raises(ValueError):
-        preprocess.preprocess_data_file(
-            tmp_path / "invalid.nc", settings={"test": "test"}
-        )
+        preprocess.preprocess_data_file(tmp_path / "invalid.nc", settings="default")
 
-    # emtpy file
+    # empty file
     empty_file_path = tmp_path / "empty.nc"
     empty_file_path.touch()  # create an empty file
     with pytest.raises(ValueError):
-        preprocess.preprocess_data_file(empty_file_path, settings={"test": "test"})
+        preprocess.preprocess_data_file(empty_file_path, settings="default")
 
-    # empty settings
+    # invalid source for settings
     with open(tmp_path / "test_data.nc", "w") as f:
         f.write("This is a test file.")
     with pytest.raises(ValueError):
-        preprocess.preprocess_data_file(tmp_path / "test_data.nc", settings={})
+        preprocess.preprocess_data_file(
+            tmp_path / "test_data.nc", source="invalid_source", settings="default"
+        )
 
 
-def test_preprocess_data_file(tmp_path, get_dataset):
-    # save dataset to a temporary file
-    file_path = tmp_path / "test_data.nc"
-    get_dataset.to_netcdf(file_path)
-
-    settings = {
+@pytest.fixture
+def get_simple_settings(tmp_path):
+    return {
+        "output_dir": str(tmp_path),
         "truncate_date": True,
         "truncate_date_from": "2025-01-01",
         "truncate_date_to": "2025-01-01",
         "truncate_date_vname": "time",
     }
+
+
+def test_preprocess_data_file_tag(tmp_path, get_dataset, get_simple_settings):
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    with open(tmp_path / "settings.json", "w", newline="", encoding="utf-8") as f:
+        json.dump(get_simple_settings, f)
+
     # preprocess the data file
-    preprocessed_dataset = preprocess.preprocess_data_file(file_path, settings=settings)
+    preprocessed_dataset, pfname = preprocess.preprocess_data_file(
+        netcdf_file=file_path,
+        source="era5",
+        settings=tmp_path / "settings.json",
+        new_settings=None,
+        unique_tag="today",
+    )
 
     # check if the time dimension is reduced
     assert len(preprocessed_dataset["t2m"].time) == 1
     assert len(preprocessed_dataset["tp"].time) == 1
 
+    assert pfname == "test_data_2025-2025_today.nc"
+
     # check if there is new file created
-    assert (tmp_path / "test_data_2025-2025.nc").exists()
-    with xr.open_dataset(tmp_path / "test_data_2025-2025.nc") as ds:
+    assert (tmp_path / "test_data_2025-2025_today.nc").exists()
+    with xr.open_dataset(tmp_path / "test_data_2025-2025_today.nc") as ds:
         assert len(ds["t2m"].time) == 1
         assert len(ds["tp"].time) == 1
+    # check if the settings file is also saved
+    assert (tmp_path / "settings_today.json").exists()
 
-    # check if file name ends with raw
-    (tmp_path / "test_data_2025-2025.nc").unlink()
+    # check when file name ends with raw
+    (tmp_path / "test_data_2025-2025_today.nc").unlink()
     file_path = tmp_path / "test_data_raw.nc"
     get_dataset.to_netcdf(file_path)
 
-    _ = preprocess.preprocess_data_file(file_path, settings)
-    assert (tmp_path / "test_data_2025-2025.nc").exists()
+    _, pfname = preprocess.preprocess_data_file(
+        netcdf_file=file_path,
+        settings=tmp_path / "settings.json",
+        unique_tag="anotherday",
+    )
+    assert pfname == "test_data_2025-2025_anotherday.nc"
+    assert (tmp_path / pfname).exists()
+    assert (tmp_path / "settings_anotherday.json").exists()
+
+
+def test_preprocess_data_file_default_tag(tmp_path, get_dataset, get_simple_settings):
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    with open(tmp_path / "settings.json", "w", newline="", encoding="utf-8") as f:
+        json.dump(get_simple_settings, f)
+
+    # preprocess the data file with auto tag
+    _, pfname = preprocess.preprocess_data_file(
+        netcdf_file=file_path,
+        settings=tmp_path / "settings.json",
+        unique_tag=None,
+    )
+
+    now = datetime.now()
+    prefix_tag = f"ts{now.strftime('%Y%m%d')}-"
+    assert prefix_tag in pfname
+    # file all files with the prefix tag
+    files = get_files(tmp_path, name_phrase=prefix_tag)
+    assert len(files) == 2  # one for data and one for settings
+
+
+def test_preprocess_data_file_diff_outdir(
+    tmp_path, get_dataset, tmpdir, get_simple_settings
+):
+    # save dataset to a temporary file
+    file_path = tmp_path / "test_data.nc"
+    get_dataset.to_netcdf(file_path)
+
+    settings = get_simple_settings.copy()
+    settings["output_dir"] = str(Path(tmpdir) / "data" / "processed")
+    with open(tmp_path / "settings.json", "w", newline="", encoding="utf-8") as f:
+        json.dump(settings, f)
+
+    # preprocess the data file
+    _, pfname = preprocess.preprocess_data_file(
+        netcdf_file=file_path,
+        settings=tmp_path / "settings.json",
+        unique_tag="20250818",
+    )
+
+    assert pfname == "test_data_2025-2025_20250818.nc"
+
+    # check if there is new file created in the specified output directory
+    # the output dir should be created if it does not exist
+    assert (Path(tmpdir) / "data" / "processed" / pfname).exists()
+    assert (Path(tmpdir) / "data" / "processed" / "settings_20250818.json").exists()
+
+    # clean up
+    (Path(tmpdir) / "data" / "processed" / pfname).unlink()
+    (Path(tmpdir) / "data" / "processed" / "settings_20250818.json").unlink()
+    (Path(tmpdir) / "data" / "processed").rmdir()
 
 
 def test_aggregate_netcdf_nuts_invalid(tmp_path, get_dataset, get_nuts_data):
