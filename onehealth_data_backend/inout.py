@@ -297,6 +297,64 @@ def get_filename(
     return file_name
 
 
+def _split_date_range_by_full_years(
+    start_time: datetime, end_time: datetime
+) -> List[Tuple[datetime, datetime]]:
+    """Split a date range into sub-ranges
+    with one range covering as many full years as possible.
+    The rest of the range is split into two sub-ranges at the start and end, if needed.
+    E.g. 2020-10-15 to 2023-03-20
+        -> [(2020-10-15, 2020-12-31), (2021-01-01, 2022-12-31), (2023-01-01, 2023-03-20)]
+    E.g. 2020-01-01 to 2023-03-20
+        -> [(2020-01-01, 2022-12-31), (2023-01-01, 2023-03-20)]
+    E.g. 2020-10-15 to 2023-12-31
+        -> [(2020-10-15, 2022-12-31), (2023-01-01, 2023-12-31)]
+    E.g. 2020-01-01 to 2023-12-31
+        -> [(2020-01-01, 2023-12-31)]
+
+    Args:
+        start_time (datetime): Start datetime.
+        end_time (datetime): End datetime.
+
+    Returns:
+        List[Tuple[datetime, datetime]]: List of tuples representing the start and end
+            of each sub-range.
+    """
+    ranges = []
+    full_years_range = None
+
+    if end_time.year - start_time.year < 1:
+        return [(start_time, end_time)]
+
+    first_full_year_start = (
+        datetime(start_time.year + 1, 1, 1)
+        if start_time != datetime(start_time.year, 1, 1)
+        else start_time
+    )
+    last_full_year_end = (
+        datetime(end_time.year - 1, 12, 31)
+        if end_time != datetime(end_time.year, 12, 31)
+        else end_time
+    )
+
+    if first_full_year_start <= last_full_year_end:
+        full_years_range = (first_full_year_start, last_full_year_end)
+
+    # from start to before full years range
+    if start_time < first_full_year_start:
+        ranges.append((start_time, (first_full_year_start - timedelta(days=1))))
+
+    # full years range
+    if full_years_range:
+        ranges.append(full_years_range)
+
+    # from after full years range to end
+    if end_time > last_full_year_end:
+        ranges.append((last_full_year_end + timedelta(days=1), end_time))
+
+    return ranges
+
+
 def _extract_years_months_days_from_range(
     start_time: datetime, end_time: datetime
 ) -> Tuple[List[str], List[str], List[str], bool]:
@@ -310,7 +368,8 @@ def _extract_years_months_days_from_range(
             only the days between start and end are included.
 
     Note: This function becomes inefficient when the range covers just a few days
-        of different months or years.
+        of different years. Use function _split_date_range_by_full_years()
+        to split the range into smaller ranges first.
 
     Args:
         start_time (datetime): Start datetime.
@@ -347,6 +406,77 @@ def _extract_years_months_days_from_range(
         days = [f"{day:02d}" for day in range(start_time.day, end_time.day + 1)]
 
     return years, months, days, truncate_later
+
+
+def _download_sub_tp_data(
+    date_range: Tuple[datetime, datetime],
+    range_idx: int,
+    area: List[float],
+    out_dir: Path,
+    file_name: str,
+    file_ext: str,
+    ds_name: str,
+    var_name: str,
+    coord_name: str,
+    data_format: str,
+) -> Tuple[xr.Dataset, Path]:
+    """Download total precipitation data for a given sub date range.
+
+    Args:
+        date_range (Tuple[datetime, datetime]): Tuple of start and end datetime.
+        range_idx (int): Index of the current sub-range.
+        area (List[float] | None): Geographical area [North, West, South, East].
+        out_dir (Path): Output directory to save the downloaded file.
+        file_name (str): Name of the final file to be saved.
+        file_ext (str): File extension (e.g. "nc", "grib").
+        ds_name (str): Dataset name.
+        var_name (str): Variable name.
+        coord_name (str): Name of the time coordinate in the dataset.
+        data_format (str): Data format (e.g. "netcdf", "grib").
+
+    Returns:
+        Tuple[xr.Dataset, Path]: The downloaded xarray Dataset and the path to the
+            temporary file where data is saved.
+    """
+    start_time = date_range[0]
+    end_time = date_range[1]
+
+    # get data for CDS request
+    years, months, days, truncate_later = _extract_years_months_days_from_range(
+        start_time, end_time
+    )
+
+    # build CDS request
+    request = {
+        "variable": [var_name],
+        "year": years,
+        "month": months,
+        "day": days,
+        "time": ["00:00"],
+        "data_format": data_format,
+        "download_format": "unarchived",
+    }
+
+    if area is not None:
+        request["area"] = area
+
+    # download data
+    tmp_file_path = out_dir / f"{file_name}_tmp{range_idx}.{file_ext}"
+    download_data(tmp_file_path, ds_name, request)
+
+    # open the downloaded data lazily
+    ds = xr.open_dataset(tmp_file_path, chunks={})
+
+    if truncate_later:
+        print(f"Truncating data of range {range_idx} ...")
+        ds = preprocess.truncate_data_by_time(
+            ds,
+            start_date=start_time.strftime("%Y-%m-%d"),
+            end_date=end_time.strftime("%Y-%m-%d"),
+            var_name=coord_name,
+        )
+
+    return ds, tmp_file_path
 
 
 def download_total_precipitation_from_hourly_era5_land(
@@ -396,72 +526,73 @@ def download_total_precipitation_from_hourly_era5_land(
     except ValueError:
         raise ValueError("start_date and end_date must be in 'YYYY-MM-DD' format.")
 
+    # prepare file name
+    has_area = area is not None
+    file_ext = _file_extension(data_format)
+    area_str = _add_prefix_if_not_empty(_area_format(has_area))
+    file_name = f"{base_name}_{start_date}-{end_date}_midnight_tp_daily{area_str}_raw"
+    output_file_name = f"{file_name}.{file_ext}"
+    output_file_path = out_dir / output_file_name
+
     # shift 1 day forward
     start_time_shifted = start_time + timedelta(days=1)
     end_time_shifted = end_time + timedelta(days=1)
 
-    # get data for CDS request
-    years, months, days, truncate_later = _extract_years_months_days_from_range(
-        start_time_shifted, end_time_shifted
-    )
-
-    # build CDS request
-    request = {
-        "variable": [var_name],
-        "year": years,
-        "month": months,
-        "day": days,
-        "time": ["00:00"],
-        "data_format": data_format,
-        "download_format": "unarchived",
-    }
-
-    has_area = area is not None
-    if has_area:
-        request["area"] = area
-
-    # get output file name
-    tmp_fname = f"{base_name}_tp_hourly_ds_tmp.{_file_extension(data_format)}"
+    # split the range into smaller ranges
+    ranges = _split_date_range_by_full_years(start_time_shifted, end_time_shifted)
 
     # download data
-    if not (out_dir / tmp_fname).exists():
-        print("Downloading data...")
-        download_data(out_dir / tmp_fname, ds_name, request)
+    if output_file_path.exists():
+        print(f"File {output_file_path} already exists. Skipping download.")
+        return str(output_file_path)
+
+    tmp_datasets = []
+    tmp_files = []
+    for i, range in enumerate(ranges):
+        print(f"Downloading data for range {i}: from {range[0]} to {range[1]} ...")
+        tmp_ds, tmp_file_path = _download_sub_tp_data(
+            date_range=range,
+            range_idx=i,
+            area=area,
+            out_dir=out_dir,
+            file_name=file_name,
+            file_ext=file_ext,
+            ds_name=ds_name,
+            var_name=var_name,
+            coord_name=coord_name,
+            data_format=data_format,
+        )
+        tmp_datasets.append(tmp_ds)
+        tmp_files.append(tmp_file_path)
+
+    assert len(ranges) == len(tmp_datasets) == len(tmp_files)
+
+    # combine all sub-datasets
+    if len(tmp_datasets) == 1:
+        combined_ds = tmp_datasets[0]
     else:
-        print("Data already exists at {}".format(out_dir / tmp_fname))
+        combined_ds = xr.concat(tmp_datasets, dim=coord_name)
+        combined_ds = combined_ds.sortby(coord_name)
 
-    # if needed, truncate data to get the exact range
-    with xr.open_dataset(out_dir / tmp_fname, chunks={}) as ds:
-        print("Truncating and/or shifting time coordinate ...")
-        if truncate_later:
-            ds = preprocess.truncate_data_by_time(
-                ds,
-                start_date=start_time_shifted.strftime("%Y-%m-%d"),
-                end_date=end_time_shifted.strftime("%Y-%m-%d"),
-                var_name=coord_name,
-            )
+    # shift time back by 1 day
+    shifted_ds = preprocess.shift_time(
+        combined_ds,
+        offset=-1,
+        time_unit="D",
+        var_name=coord_name,
+    )
 
-        # shift time back by 1 day
-        shifted_ds = preprocess.shift_time(
-            ds,
-            offset=-1,
-            time_unit="D",
-            var_name=coord_name,
+    # save the processed data
+    shifted_ds.to_netcdf(output_file_path, mode="w", format="NETCDF4")
+
+    # clean up temporary files
+    for tmp_file in tmp_files:
+        tmp_file.unlink()
+
+    print(
+        "Total precipitation data from hourly dataset saved to {}".format(
+            output_file_path
         )
+    )
 
-        # update output file name to indicate time change
-        # the shift operation might change the year range
-        file_ext = Path(out_dir / tmp_fname).suffix
-        area_str = _add_prefix_if_not_empty(_area_format(has_area))
-        file_name = (
-            f"{base_name}_{start_date}-{end_date}_midnight_tp_daily{area_str}_raw"
-        )
-        output_file_name = file_name + file_ext
-
-        # save the processed data
-        shifted_ds.to_netcdf(out_dir / output_file_name, mode="w", format="NETCDF4")
-
-        # drop the temporary file
-        (out_dir / tmp_fname).unlink(missing_ok=True)
-
-        print("Processed data saved to {}".format(out_dir / output_file_name))
+    return str(output_file_path)

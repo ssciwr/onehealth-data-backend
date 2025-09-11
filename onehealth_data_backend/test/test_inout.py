@@ -507,6 +507,77 @@ def test_get_filename_days_times_dstype():
     assert file_name == "era5_data_2025_01_alld_midnight_2t_daily_area_raw.nc"
 
 
+def test_split_date_range_by_full_years():
+    # sample date
+    start_time = datetime.strptime("2016-01-02", "%Y-%m-%d")
+    end_time = datetime.strptime("2018-01-01", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 3
+    assert ranges[0] == (start_time, datetime.strptime("2016-12-31", "%Y-%m-%d"))
+    assert ranges[1] == (
+        datetime.strptime("2017-01-01", "%Y-%m-%d"),
+        datetime.strptime("2017-12-31", "%Y-%m-%d"),
+    )
+    assert ranges[2] == (datetime.strptime("2018-01-01", "%Y-%m-%d"), end_time)
+
+    # same year
+    start_time = datetime.strptime("2025-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-10-20", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 1
+    assert ranges[0] == (start_time, end_time)
+
+    # same year, month
+    start_time = datetime.strptime("2025-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-03-20", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 1
+    assert ranges[0] == (start_time, end_time)
+
+    # mid at both ends
+    start_time = datetime.strptime("2025-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2027-10-20", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 3
+    assert ranges[0] == (start_time, datetime.strptime("2025-12-31", "%Y-%m-%d"))
+    assert ranges[1] == (
+        datetime.strptime("2026-01-01", "%Y-%m-%d"),
+        datetime.strptime("2026-12-31", "%Y-%m-%d"),
+    )
+    assert ranges[2] == (datetime.strptime("2027-01-01", "%Y-%m-%d"), end_time)
+
+    # mid at both ends, 1 year apart
+    start_time = datetime.strptime("2025-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2026-10-20", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 2
+    assert ranges[0] == (start_time, datetime.strptime("2025-12-31", "%Y-%m-%d"))
+    assert ranges[1] == (datetime.strptime("2026-01-01", "%Y-%m-%d"), end_time)
+
+    # full years at both ends
+    start_time = datetime.strptime("2025-01-01", "%Y-%m-%d")
+    end_time = datetime.strptime("2026-12-31", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 1
+    assert ranges[0] == (start_time, end_time)
+
+    # full year at start, mid at end
+    start_time = datetime.strptime("2025-01-01", "%Y-%m-%d")
+    end_time = datetime.strptime("2026-10-20", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 2
+    assert ranges[0] == (start_time, datetime.strptime("2025-12-31", "%Y-%m-%d"))
+    assert ranges[1] == (datetime.strptime("2026-01-01", "%Y-%m-%d"), end_time)
+
+    # mid at start, full year at end
+    start_time = datetime.strptime("2025-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2026-12-31", "%Y-%m-%d")
+    ranges = inout._split_date_range_by_full_years(start_time, end_time)
+    assert len(ranges) == 2
+    assert ranges[0] == (start_time, datetime.strptime("2025-12-31", "%Y-%m-%d"))
+    assert ranges[1] == (datetime.strptime("2026-01-01", "%Y-%m-%d"), end_time)
+
+
 def test_extract_years_months_days_from_range():
     all_months = [str(i).zfill(2) for i in range(1, 13)]
     all_days = [str(i).zfill(2) for i in range(1, 32)]
@@ -554,6 +625,37 @@ def test_extract_years_months_days_from_range():
     assert months == ["05"]
     assert days == [str(i).zfill(2) for i in range(10, 26)]
     assert truncate is False
+
+
+def test_download_sub_tp_data(tmp_path):
+    out_dir = tmp_path / "test_sub_tp"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    start_date = "2025-03-30"
+    end_date = "2025-03-31"
+    tmp_ds, tmp_file_path = inout._download_sub_tp_data(
+        date_range=(
+            datetime.strptime(start_date, "%Y-%m-%d"),
+            datetime.strptime(end_date, "%Y-%m-%d"),
+        ),
+        range_idx=0,
+        area=[0, -1, 0, 1],
+        out_dir=out_dir,
+        file_name="era5_data",
+        file_ext="nc",
+        ds_name="reanalysis-era5-land",
+        var_name="total_precipitation",
+        coord_name="valid_time",
+        data_format="netcdf",
+    )
+    assert tmp_file_path.exists()
+    assert isinstance(tmp_ds, xr.Dataset)
+
+    assert tmp_ds["valid_time"].values[0] == np.datetime64("2025-03-30")
+    assert tmp_ds["valid_time"].values[1] == np.datetime64("2025-03-31")
+
+    # Clean up
+    tmp_file_path.unlink()
 
 
 def test_download_total_precipitation_from_hourly_era5_land_invalid_dates(tmpdir):
@@ -639,6 +741,10 @@ def test_download_total_precipitation_from_hourly_era5_land_diff_year(
     output_file_name = "era5_data_2024-12-30-2025-01-02_midnight_tp_daily_area_raw.nc"
     output_file_path = out_dir / output_file_name
     assert output_file_path.exists()
+
+    # check if temporary files are removed
+    tmp_file_path_1 = out_dir / output_file_name.replace(".nc", "_tmp0.nc")
+    assert not tmp_file_path_1.exists()
 
     # check if dates are correct in the downloaed dataset
     with xr.open_dataset(output_file_path) as out_ds:
