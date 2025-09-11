@@ -418,7 +418,7 @@ def _download_sub_tp_data(
     var_name: str,
     coord_name: str,
     data_format: str,
-) -> Tuple[xr.Dataset, Path]:
+) -> Path:
     """Download total precipitation data for a given sub date range.
 
     Args:
@@ -434,8 +434,7 @@ def _download_sub_tp_data(
         data_format (str): Data format (e.g. "netcdf", "grib").
 
     Returns:
-        Tuple[xr.Dataset, Path]: The downloaded xarray Dataset and the path to the
-            temporary file where data is saved.
+        Path: The path to the temporary file where data is saved.
     """
     start_time = date_range[0]
     end_time = date_range[1]
@@ -463,19 +462,23 @@ def _download_sub_tp_data(
     tmp_file_path = out_dir / f"{file_name}_tmp{range_idx}.{file_ext}"
     download_data(tmp_file_path, ds_name, request)
 
-    # open the downloaded data lazily
-    ds = xr.open_dataset(tmp_file_path, chunks={coord_name: 10})
-
     if truncate_later:
         print(f"Truncating data of range {range_idx} ...")
-        ds = preprocess.truncate_data_by_time(
-            ds,
-            start_date=start_time.strftime("%Y-%m-%d"),
-            end_date=end_time.strftime("%Y-%m-%d"),
-            var_name=coord_name,
-        )
+        tmp_out = tmp_file_path.with_suffix(".truncated.nc")
+        with xr.open_dataset(tmp_file_path, chunks="auto") as ds:
+            ds = preprocess.truncate_data_by_time(
+                ds,
+                start_date=start_time.strftime("%Y-%m-%d"),
+                end_date=end_time.strftime("%Y-%m-%d"),
+                var_name=coord_name,
+            )
 
-    return ds, tmp_file_path
+            # write to a another temporary file
+            ds.to_netcdf(tmp_out, mode="w", format="NETCDF4")
+        # replace the original temporary file
+        tmp_out.replace(tmp_file_path)
+
+    return tmp_file_path
 
 
 def download_total_precipitation_from_hourly_era5_land(
@@ -545,11 +548,10 @@ def download_total_precipitation_from_hourly_era5_land(
         print(f"File {output_file_path} already exists. Skipping download.")
         return str(output_file_path)
 
-    tmp_datasets = []
     tmp_files = []
     for i, range in enumerate(ranges):
         print(f"Downloading data for range {i}: from {range[0]} to {range[1]} ...")
-        tmp_ds, tmp_file_path = _download_sub_tp_data(
+        tmp_file_path = _download_sub_tp_data(
             date_range=range,
             range_idx=i,
             area=area,
@@ -561,22 +563,18 @@ def download_total_precipitation_from_hourly_era5_land(
             coord_name=coord_name,
             data_format=data_format,
         )
-        tmp_datasets.append(tmp_ds)
         tmp_files.append(tmp_file_path)
 
-    assert len(ranges) == len(tmp_datasets) == len(tmp_files)
+    assert len(ranges) == len(tmp_files)
 
     # combine all sub-datasets
-    if len(tmp_datasets) == 1:
-        combined_ds = tmp_datasets[0]
-    else:
-        print("Combining all sub-datasets ...")
-        combined_ds = xr.concat(tmp_datasets, dim=coord_name)
-        combined_ds = combined_ds.sortby(coord_name)
+    print("Combining all sub-datasets ...")
+    combined_ds = xr.open_mfdataset(tmp_files, chunks="auto", combine="by_coords")
+    combined_ds = combined_ds.sortby(coord_name)
 
     # shift time back by 1 day
     print("Shifting time back by 1 day ...")
-    shifted_ds = preprocess.shift_time(
+    preprocess.shift_time(
         combined_ds,
         offset=-1,
         time_unit="D",
@@ -584,7 +582,7 @@ def download_total_precipitation_from_hourly_era5_land(
     )
 
     # save the processed data
-    shifted_ds.to_netcdf(output_file_path, mode="w", format="NETCDF4")
+    combined_ds.to_netcdf(output_file_path, mode="w", format="NETCDF4")
 
     # clean up temporary files
     for tmp_file in tmp_files:

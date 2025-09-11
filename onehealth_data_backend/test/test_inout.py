@@ -644,7 +644,7 @@ def test_download_sub_tp_data(tmp_path):
 
     start_date = "2025-03-30"
     end_date = "2025-03-31"
-    tmp_ds, tmp_file_path = inout._download_sub_tp_data(
+    tmp_file_path = inout._download_sub_tp_data(
         date_range=(
             datetime.strptime(start_date, "%Y-%m-%d"),
             datetime.strptime(end_date, "%Y-%m-%d"),
@@ -660,10 +660,10 @@ def test_download_sub_tp_data(tmp_path):
         data_format="netcdf",
     )
     assert tmp_file_path.exists()
-    assert isinstance(tmp_ds, xr.Dataset)
 
-    assert tmp_ds["valid_time"].values[0] == np.datetime64("2025-03-30")
-    assert tmp_ds["valid_time"].values[1] == np.datetime64("2025-03-31")
+    with xr.open_dataset(tmp_file_path) as tmp_ds:
+        assert tmp_ds["valid_time"].values[0] == np.datetime64("2025-03-30")
+        assert tmp_ds["valid_time"].values[1] == np.datetime64("2025-03-31")
 
     # Clean up
     tmp_file_path.unlink()

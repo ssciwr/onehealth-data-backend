@@ -491,8 +491,9 @@ def shift_time(
     offset: int = -1,
     time_unit: Literal["W", "D", "h", "m", "s", "ms", "ns"] = "D",
     var_name: str = "time",
-) -> xr.Dataset:
+):
     """Shift the time coordinate of a dataset by a specified timedelta.
+    The dataset is overwritten with the shifted time values.
 
     Args:
         dataset (xr.Dataset): Dataset to shift.
@@ -500,9 +501,6 @@ def shift_time(
         time_unit (Literal["W", "D", "h", "m", "s", "ms", "ns"]):
             Time unit for the shift. Default is "D".
         var_name (str): Name of the time variable in the dataset. Default is "time".
-
-    Returns:
-        xr.Dataset: Dataset with shifted time coordinate.
     """
     if var_name not in dataset.coords:
         raise ValueError(f"Coordinate '{var_name}' not found in dataset.")
@@ -515,7 +513,6 @@ def shift_time(
             "time_unit must be one of 'W', 'D', 'h', 'm', 's', 'ms', or 'ns'."
         )
 
-    dataset = dataset.copy()
     dataset[var_name] = dataset[var_name] + np.timedelta64(offset, time_unit).astype(
         "timedelta64[ns]"
     )

@@ -646,39 +646,44 @@ def test_shift_time_invalid(get_dataset):
         preprocess.shift_time(get_dataset, offset=2, time_unit="M", var_name="time")
 
 
-def test_shift_time(get_dataset):
+def test_shift_time_forward(get_dataset):
+    original_time = get_dataset["time"].copy()
     # shift time by 2 days
     offset = 2
     time_unit = "D"
     time_shift = np.timedelta64(2, "D")
-    shifted_dataset = preprocess.shift_time(
+    preprocess.shift_time(
         get_dataset, offset=offset, time_unit=time_unit, var_name="time"
     )
 
     # check if the time dimension is preserved
-    assert len(shifted_dataset["time"]) == len(get_dataset["time"])
+    assert len(get_dataset["time"]) == 2
 
     # check if the time is shifted correctly
-    expected_time = get_dataset["time"] + time_shift.astype("timedelta64[ns]")
+    expected_time = original_time + time_shift.astype("timedelta64[ns]")
     assert np.array_equal(
-        np.sort(shifted_dataset["time"].values), np.sort(expected_time.values)
+        np.sort(get_dataset["time"].values), np.sort(expected_time.values)
     )
 
     # check if time is at midnight after shifting
-    assert all(shifted_dataset["time"].dt.hour.values == 0)
+    assert all(get_dataset["time"].dt.hour.values == 0)
+
+
+def test_shift_time_backward(get_dataset):
+    original_time = get_dataset["time"].copy()
 
     # shift time by -2 hours
     offset = -2
     time_unit = "h"
     time_shift = np.timedelta64(offset, time_unit)
-    shifted_dataset = preprocess.shift_time(
+    preprocess.shift_time(
         get_dataset, offset=offset, time_unit=time_unit, var_name="time"
     )
-    expected_time = get_dataset["time"] + time_shift.astype("timedelta64[ns]")
+    expected_time = original_time + time_shift.astype("timedelta64[ns]")
     assert np.array_equal(
-        np.sort(shifted_dataset["time"].values), np.sort(expected_time.values)
+        np.sort(get_dataset["time"].values), np.sort(expected_time.values)
     )
-    assert all(shifted_dataset["time"].dt.hour.values == 22)
+    assert all(get_dataset["time"].dt.hour.values == 22)
 
 
 def test_parse_date_invalid():
