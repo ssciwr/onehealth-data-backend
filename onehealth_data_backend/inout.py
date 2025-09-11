@@ -297,7 +297,7 @@ def get_filename(
     return file_name
 
 
-def _extract_years_months_days(
+def _extract_years_months_days_from_range(
     start_time: datetime, end_time: datetime
 ) -> Tuple[List[str], List[str], List[str], bool]:
     """Extract years, months, and days from start and end datetime objects.
@@ -309,6 +309,9 @@ def _extract_years_months_days(
         * If they are in the same month,
             only the days between start and end are included.
 
+    Note: This function becomes inefficient when the range covers just a few days
+        of different months or years.
+
     Args:
         start_time (datetime): Start datetime.
         end_time (datetime): End datetime.
@@ -319,36 +322,43 @@ def _extract_years_months_days(
             to get the exact range.
             Months and days are formatted as two-digit strings.
     """
-    truncate = False
+    truncate_later = False
 
     years = [str(year) for year in range(start_time.year, end_time.year + 1)]
 
     if start_time.year != end_time.year:
-        months = [f"{month:02d}" for month in range(1, 13)]
-        days = [f"{day:02d}" for day in range(1, 32)]
-        truncate = True
+        months = [str(month).zfill(2) for month in range(1, 13)]
+        days = [str(day).zfill(2) for day in range(1, 32)]
+        if (
+            start_time.month != 1
+            or start_time.day != 1
+            or end_time.month != 12
+            or end_time.day != 31
+        ):
+            truncate_later = True
     elif start_time.month != end_time.month:
         months = [
             f"{month:02d}" for month in range(start_time.month, end_time.month + 1)
         ]
         days = [f"{day:02d}" for day in range(1, 32)]
-        truncate = True
+        truncate_later = True
     else:
         months = [f"{start_time.month:02d}"]
         days = [f"{day:02d}" for day in range(start_time.day, end_time.day + 1)]
 
-    return years, months, days, truncate
+    return years, months, days, truncate_later
 
 
 def download_total_precipitation_from_hourly_era5_land(
-    out_dir: Path,
     start_date: str,
     end_date: str,
     area: List[float] | None = None,
+    out_dir: Path = Path("."),
     base_name: str = "era5_data",
     data_format: str = "netcdf",
     ds_name: str = "reanalysis-era5-land",
     coord_name: str = "valid_time",
+    var_name: str = "total_precipitation",
 ) -> str:
     """Download total precipitation data from hourly ERA5-Land dataset.
     Due to the nature of this dataset, value at 00:00 is total precipitation
@@ -357,11 +367,12 @@ def download_total_precipitation_from_hourly_era5_land(
     then shift the time value back by 1 day after downloading.
 
     Args:
-        out_dir (Path): The directory to save the downloaded file.
         start_date (str): Start date in "YYYY-MM-DD" format.
         end_date (str): End date in "YYYY-MM-DD" format.
         area (List[float] | None): Geographical area [North, West, South, East].
             Default is None (global).
+        out_dir (Path): Output directory to save the downloaded file.
+            Default is current directory.
         base_name (str): Base name for the file.
             Default is "era5_data".
         data_format (str): Data format (e.g., "netcdf", "grib").
@@ -372,6 +383,9 @@ def download_total_precipitation_from_hourly_era5_land(
         coord_name (str): Name of the time coordinate in the dataset.
             Default is "valid_time".
             Only modify this if CDS changes the name of the coordinate.
+        var_name (str): Name of the data variable.
+            Default is "total_precipitation".
+            Only modify this if CDS changes the name of the variable.
 
     Returns:
         str: The path to the downloaded file.
@@ -387,12 +401,11 @@ def download_total_precipitation_from_hourly_era5_land(
     end_time_shifted = end_time + timedelta(days=1)
 
     # get data for CDS request
-    years, months, days, truncate = _extract_years_months_days(
+    years, months, days, truncate_later = _extract_years_months_days_from_range(
         start_time_shifted, end_time_shifted
     )
 
     # build CDS request
-    var_name = "total_precipitation"
     request = {
         "variable": [var_name],
         "year": years,
@@ -401,34 +414,26 @@ def download_total_precipitation_from_hourly_era5_land(
         "time": ["00:00"],
         "data_format": data_format,
         "download_format": "unarchived",
-        "area": area,
     }
 
-    # get output file name
     has_area = area is not None
-    output_file_name = get_filename(
-        ds_name=ds_name,
-        data_format=data_format,
-        years=years,
-        months=months,
-        days=days,
-        times=["00:00"],
-        has_area=has_area,
-        base_name=base_name,
-        variables=[var_name],
-    )
+    if has_area:
+        request["area"] = area
+
+    # get output file name
+    tmp_fname = f"{base_name}_tp_hourly_ds_tmp.{_file_extension(data_format)}"
 
     # download data
-    if not output_file_name.exists():
+    if not (out_dir / tmp_fname).exists():
         print("Downloading data...")
-        download_data(out_dir / output_file_name, ds_name, request)
+        download_data(out_dir / tmp_fname, ds_name, request)
     else:
-        print("Data already exists at {}".format(out_dir / output_file_name))
+        print("Data already exists at {}".format(out_dir / tmp_fname))
 
     # if needed, truncate data to get the exact range
-    with xr.open_dataset(out_dir / output_file_name) as ds:
+    with xr.open_dataset(out_dir / tmp_fname, chunks={}) as ds:
         print("Truncating and/or shifting time coordinate ...")
-        if truncate:
+        if truncate_later:
             ds = preprocess.truncate_data_by_time(
                 ds,
                 start_date=start_time_shifted.strftime("%Y-%m-%d"),
@@ -445,17 +450,18 @@ def download_total_precipitation_from_hourly_era5_land(
         )
 
         # update output file name to indicate time change
-        file_name = Path(out_dir / output_file_name).stem
+        # the shift operation might change the year range
+        file_ext = Path(out_dir / tmp_fname).suffix
+        area_str = _add_prefix_if_not_empty(_area_format(has_area))
         file_name = (
-            file_name[: -len("_raw")] if file_name.endswith("_raw") else file_name
+            f"{base_name}_{start_date}-{end_date}_midnight_tp_daily{area_str}_raw"
         )
-        file_ext = Path(out_dir / output_file_name).suffix
-
-        min_year = start_time.year
-        max_year = end_time.year
-        file_name += f"_{min_year}-{max_year}"
         output_file_name = file_name + file_ext
 
         # save the processed data
         shifted_ds.to_netcdf(out_dir / output_file_name, mode="w", format="NETCDF4")
+
+        # drop the temporary file
+        (out_dir / tmp_fname).unlink(missing_ok=True)
+
         print("Processed data saved to {}".format(out_dir / output_file_name))

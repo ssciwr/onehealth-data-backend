@@ -2,6 +2,7 @@ from onehealth_data_backend import inout
 import pytest
 import xarray as xr
 import numpy as np
+from datetime import datetime
 
 
 def test_download_data_invalid():
@@ -504,3 +505,149 @@ def test_get_filename_days_times_dstype():
         variables=["2m_temperature"],
     )
     assert file_name == "era5_data_2025_01_alld_midnight_2t_daily_area_raw.nc"
+
+
+def test_extract_years_months_days_from_range():
+    all_months = [str(i).zfill(2) for i in range(1, 13)]
+    all_days = [str(i).zfill(2) for i in range(1, 32)]
+
+    # diff years, full months and days
+    start_time = datetime.strptime("2024-01-01", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-12-31", "%Y-%m-%d")
+    years, months, days, truncate = inout._extract_years_months_days_from_range(
+        start_time, end_time
+    )
+    assert years == ["2024", "2025"]
+    assert months == all_months
+    assert days == all_days
+    assert truncate is False
+
+    # diff years, partial months or days
+    start_time = datetime.strptime("2026-03-15", "%Y-%m-%d")
+    end_time = datetime.strptime("2027-10-20", "%Y-%m-%d")
+    years, months, days, truncate = inout._extract_years_months_days_from_range(
+        start_time, end_time
+    )
+    assert years == ["2026", "2027"]
+    assert months == all_months
+    assert days == all_days
+    assert truncate is True
+
+    # same years, diff months
+    start_time = datetime.strptime("2025-03-10", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-10-25", "%Y-%m-%d")
+    years, months, days, truncate = inout._extract_years_months_days_from_range(
+        start_time, end_time
+    )
+    assert years == ["2025"]
+    assert months == [str(i).zfill(2) for i in range(3, 11)]
+    assert days == all_days
+    assert truncate is True
+
+    # same years, same months, diff days
+    start_time = datetime.strptime("2025-05-10", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-05-25", "%Y-%m-%d")
+    years, months, days, truncate = inout._extract_years_months_days_from_range(
+        start_time, end_time
+    )
+    assert years == ["2025"]
+    assert months == ["05"]
+    assert days == [str(i).zfill(2) for i in range(10, 26)]
+    assert truncate is False
+
+
+def test_download_total_precipitation_from_hourly_era5_land_invalid_dates(tmpdir):
+    with pytest.raises(ValueError):
+        inout.download_total_precipitation_from_hourly_era5_land(
+            start_date="2025",
+            end_date=1.0,
+            area=[0, -1, 0, 1],
+            out_dir=tmpdir,
+        )
+
+
+def test_download_total_precipitation_from_hourly_era5_land_same_year_month(
+    tmp_path,
+):
+    out_dir = tmp_path / "test_download_tp"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    start_date = "2025-03-15"
+    end_date = "2025-03-17"
+    inout.download_total_precipitation_from_hourly_era5_land(
+        out_dir=out_dir,
+        start_date=start_date,
+        end_date=end_date,
+        area=None,
+        base_name="era5_data",
+        data_format="netcdf",
+        ds_name="reanalysis-era5-land",
+        coord_name="valid_time",
+    )
+    output_file_name = "era5_data_2025-03-15-2025-03-17_midnight_tp_daily_raw.nc"
+    output_file_path = out_dir / output_file_name
+    assert output_file_path.exists()
+
+    # manually download data for checking
+    dataset = "reanalysis-era5-land"
+    request = {
+        "variable": ["total_precipitation"],
+        "year": "2025",
+        "month": "03",
+        "day": ["16", "17", "18"],  # move 1 day forward
+        "time": ["00:00"],
+        "data_format": "netcdf",
+        "download_format": "unarchived",
+    }
+    tmp_file = out_dir / "temp_download.nc"
+    inout.download_data(tmp_file, dataset, request)
+
+    # compare data
+    with xr.open_dataset(tmp_file) as tmp_ds:
+        with xr.open_dataset(output_file_path) as out_ds:
+            np.testing.assert_allclose(
+                tmp_ds["tp"].values,
+                out_ds["tp"].values,
+                rtol=1e-5,
+                atol=1e-5,
+            )
+
+    # clean up
+    output_file_path.unlink()
+    tmp_file.unlink()
+
+
+def test_download_total_precipitation_from_hourly_era5_land_diff_year(
+    tmp_path,
+):
+    out_dir = tmp_path / "test_download_tp_diff_year"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    start_date = "2024-12-30"
+    end_date = "2025-01-02"
+    inout.download_total_precipitation_from_hourly_era5_land(
+        out_dir=out_dir,
+        start_date=start_date,
+        end_date=end_date,
+        area=[0, -1, 0, 1],
+        base_name="era5_data",
+        data_format="netcdf",
+        ds_name="reanalysis-era5-land",
+        coord_name="valid_time",
+    )
+    output_file_name = "era5_data_2024-12-30-2025-01-02_midnight_tp_daily_area_raw.nc"
+    output_file_path = out_dir / output_file_name
+    assert output_file_path.exists()
+
+    # check if dates are correct in the downloaed dataset
+    with xr.open_dataset(output_file_path) as out_ds:
+        times = out_ds["valid_time"].values
+        dates = np.array(
+            [
+                np.datetime64("2024-12-30"),
+                np.datetime64("2024-12-31"),
+                np.datetime64("2025-01-01"),
+                np.datetime64("2025-01-02"),
+            ]
+        )
+        np.testing.assert_array_equal(times, dates)
