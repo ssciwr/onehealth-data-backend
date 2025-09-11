@@ -574,11 +574,11 @@ def test_download_total_precipitation_from_hourly_era5_land_same_year_month(
 
     start_date = "2025-03-15"
     end_date = "2025-03-17"
-    inout.download_total_precipitation_from_hourly_era5_land(
-        out_dir=out_dir,
+    fname = inout.download_total_precipitation_from_hourly_era5_land(
         start_date=start_date,
         end_date=end_date,
         area=None,
+        out_dir=out_dir,
         base_name="era5_data",
         data_format="netcdf",
         ds_name="reanalysis-era5-land",
@@ -587,6 +587,7 @@ def test_download_total_precipitation_from_hourly_era5_land_same_year_month(
     output_file_name = "era5_data_2025-03-15-2025-03-17_midnight_tp_daily_raw.nc"
     output_file_path = out_dir / output_file_name
     assert output_file_path.exists()
+    assert fname == str(output_file_path)
 
     # manually download data for checking
     dataset = "reanalysis-era5-land"
@@ -625,11 +626,11 @@ def test_download_total_precipitation_from_hourly_era5_land_diff_year(
 
     start_date = "2024-12-30"
     end_date = "2025-01-02"
-    inout.download_total_precipitation_from_hourly_era5_land(
-        out_dir=out_dir,
+    _ = inout.download_total_precipitation_from_hourly_era5_land(
         start_date=start_date,
         end_date=end_date,
         area=[0, -1, 0, 1],
+        out_dir=out_dir,
         base_name="era5_data",
         data_format="netcdf",
         ds_name="reanalysis-era5-land",
@@ -651,3 +652,26 @@ def test_download_total_precipitation_from_hourly_era5_land_diff_year(
             ]
         )
         np.testing.assert_array_equal(times, dates)
+
+
+def test_download_total_precipitation_from_hourly_era5_land_existing_file(tmp_path):
+    existing_file = (
+        tmp_path / "era5_data_2025-03-18-2025-03-19_midnight_tp_daily_raw.nc"
+    )
+    existing_file.touch()  # create an empty file
+
+    fname = inout.download_total_precipitation_from_hourly_era5_land(
+        start_date="2025-03-18",
+        end_date="2025-03-19",
+        area=None,
+        out_dir=tmp_path,
+        base_name="era5_data",
+        data_format="netcdf",
+        ds_name="reanalysis-era5-land",
+        coord_name="valid_time",
+    )
+
+    assert fname == str(existing_file)
+
+    # check if the existing file is empty
+    assert existing_file.stat().st_size == 0
