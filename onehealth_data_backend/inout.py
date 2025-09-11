@@ -527,7 +527,7 @@ def download_total_precipitation_from_hourly_era5_land(
             Default is "era5_data".
         data_format (str): Data format (e.g., "netcdf", "grib").
             Default is "netcdf".
-        ds_names (str): Dataset name.
+        ds_name (str): Dataset name.
             Default is "reanalysis-era5-land".
             Only modify this if CDS changes the name of the dataset.
         coord_name (str): Name of the time coordinate in the dataset.
