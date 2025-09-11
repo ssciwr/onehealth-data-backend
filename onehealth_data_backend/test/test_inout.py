@@ -760,6 +760,40 @@ def test_download_total_precipitation_from_hourly_era5_land_diff_year(
         np.testing.assert_array_equal(times, dates)
 
 
+def test_download_total_precipitation_from_hourly_era5_land_truncate(
+    tmp_path,
+):
+    out_dir = tmp_path / "test_download_tp_truncate"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    start_date = "2024-10-15"
+    end_date = "2024-11-15"
+    fname = inout.download_total_precipitation_from_hourly_era5_land(
+        start_date=start_date,
+        end_date=end_date,
+        area=[0, -1, 0, 1],
+        out_dir=out_dir,
+        base_name="era5_data",
+        data_format="netcdf",
+        ds_name="reanalysis-era5-land",
+        coord_name="valid_time",
+    )
+
+    output_file_name = "era5_data_2024-10-15-2024-11-15_midnight_tp_daily_area_raw.nc"
+    output_file_path = out_dir / output_file_name
+    assert fname == str(output_file_path)
+    assert output_file_path.exists()
+
+    # check if dates are correct in the downloaed dataset
+    with xr.open_dataset(output_file_path) as out_ds:
+        times = out_ds["valid_time"].values
+        dates = np.array(
+            [np.datetime64(f"2024-10-{i:02d}") for i in range(15, 32)]
+            + [np.datetime64(f"2024-11-{i:02d}") for i in range(1, 16)]
+        )
+        np.testing.assert_array_equal(times, dates)
+
+
 def test_download_total_precipitation_from_hourly_era5_land_existing_file(tmp_path):
     existing_file = (
         tmp_path / "era5_data_2025-03-18-2025-03-19_midnight_tp_daily_raw.nc"
