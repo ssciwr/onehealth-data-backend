@@ -48,6 +48,17 @@ The filenames of the downloaded netCDF files follow this structure:
 * Extension `ext` of the file can be `.nc` or `.grib`
 * If any of these fields (from `year_str` to `area_str`) are missing from the download request, the corresponding string and the preceding `_` are removed from the file name.
 
+#### Special case:
+
+As for total precipitation data downloaded from dataset `ERA5-Land hourly data from 1950 to present`, the file name is structured as:
+
+```text linenums="0"
+{base_name}_{start_date}-{end_date}_{time_str}_{var_str}_{ds_type}_{area_str}_raw.{ext}
+```
+
+In this case, `time_str` is `"midnight"` and `ds_type` is `"daily"`.
+
+
 ## Eurostat's NUTS definition 
 The regions are set [here](https://ec.europa.eu/eurostat/en/web/products-manuals-and-guidelines/w/ks-gq-23-010) and corresponding shapefiles can be downloaded [here](https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics).
 

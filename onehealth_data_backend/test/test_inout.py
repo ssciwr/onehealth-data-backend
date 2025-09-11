@@ -669,6 +669,37 @@ def test_download_sub_tp_data(tmp_path):
     tmp_file_path.unlink()
 
 
+def test_download_sub_tp_data_existing_file(tmp_path):
+    out_dir = tmp_path / "test_sub_tp_existing"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    expected_file = out_dir / "era5_data_tmp0.nc"
+    expected_file.touch()
+
+    start_date = "2025-03-30"
+    end_date = "2025-03-31"
+    tmp_file_path = inout._download_sub_tp_data(
+        date_range=(
+            datetime.strptime(start_date, "%Y-%m-%d"),
+            datetime.strptime(end_date, "%Y-%m-%d"),
+        ),
+        range_idx=0,
+        area=[0, -1, 0, 1],
+        out_dir=out_dir,
+        file_name="era5_data",
+        file_ext="nc",
+        ds_name="reanalysis-era5-land",
+        var_name="total_precipitation",
+        coord_name="valid_time",
+        data_format="netcdf",
+    )
+    assert tmp_file_path == expected_file
+    assert tmp_file_path.stat().st_size == 0  # file is empty
+
+    # Clean up
+    tmp_file_path.unlink()
+
+
 def test_download_total_precipitation_from_hourly_era5_land_invalid_dates(tmpdir):
     with pytest.raises(ValueError):
         inout.download_total_precipitation_from_hourly_era5_land(

@@ -4,6 +4,7 @@ import xarray as xr
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta
 from onehealth_data_backend import preprocess
+from dask.diagnostics import ProgressBar
 
 
 def download_data(output_file: Path, dataset: str, request: Dict[str, Any]):
@@ -460,12 +461,17 @@ def _download_sub_tp_data(
 
     # download data
     tmp_file_path = out_dir / f"{file_name}_tmp{range_idx}.{file_ext}"
-    download_data(tmp_file_path, ds_name, request)
+    if tmp_file_path.exists():
+        print(f"File {tmp_file_path} already exists. Skipping download.")
+        return tmp_file_path
+    else:
+        print(f"Downloading data to temporary file {tmp_file_path} ...")
+        download_data(tmp_file_path, ds_name, request)
 
     if truncate_later:
-        print(f"Truncating data of range {range_idx} ...")
         tmp_out = tmp_file_path.with_suffix(".truncated.nc")
         with xr.open_dataset(tmp_file_path, chunks="auto") as ds:
+            print(f"Truncating data of range {range_idx} ...")
             ds = preprocess.truncate_data_by_time(
                 ds,
                 start_date=start_time.strftime("%Y-%m-%d"),
@@ -474,8 +480,20 @@ def _download_sub_tp_data(
             )
 
             # write to a another temporary file
-            ds.to_netcdf(tmp_out, mode="w", format="NETCDF4")
+            print(f"Writing truncated data to {tmp_out} ...")
+            encoding = {
+                var: {
+                    "zlib": True,
+                    "complevel": 4,
+                }
+                for var in ds.data_vars
+            }
+            with ProgressBar():  # parallel writing with dask
+                ds.to_netcdf(
+                    tmp_out, mode="w", format="NETCDF4", encoding=encoding, compute=True
+                )
         # replace the original temporary file
+        print(f"Replacing {tmp_file_path} with truncated data ...")
         tmp_out.replace(tmp_file_path)
 
     return tmp_file_path
@@ -582,7 +600,22 @@ def download_total_precipitation_from_hourly_era5_land(
     )
 
     # save the processed data
-    combined_ds.to_netcdf(output_file_path, mode="w", format="NETCDF4")
+    print(f"Saving the combined and shifted data to {output_file_path} ...")
+    encoding = {
+        var: {
+            "zlib": True,
+            "complevel": 4,
+        }
+        for var in combined_ds.data_vars
+    }
+    with ProgressBar():  # parallel writing with dask
+        combined_ds.to_netcdf(
+            output_file_path,
+            mode="w",
+            format="NETCDF4",
+            encoding=encoding,
+            compute=True,
+        )
 
     # clean up temporary files
     for tmp_file in tmp_files:
