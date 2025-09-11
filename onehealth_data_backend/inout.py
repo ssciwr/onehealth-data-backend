@@ -385,22 +385,21 @@ def _extract_years_months_days_from_range(
 
     years = [str(year) for year in range(start_time.year, end_time.year + 1)]
 
+    not_start_year = start_time.month != 1 or start_time.day != 1
+    not_end_year = end_time.month != 12 or end_time.day != 31
+
     if start_time.year != end_time.year:
         months = [str(month).zfill(2) for month in range(1, 13)]
         days = [str(day).zfill(2) for day in range(1, 32)]
-        if (
-            start_time.month != 1
-            or start_time.day != 1
-            or end_time.month != 12
-            or end_time.day != 31
-        ):
+        if not_start_year or not_end_year:
             truncate_later = True
     elif start_time.month != end_time.month:
         months = [
             f"{month:02d}" for month in range(start_time.month, end_time.month + 1)
         ]
         days = [f"{day:02d}" for day in range(1, 32)]
-        truncate_later = True
+        if not_start_year or not_end_year:
+            truncate_later = True
     else:
         months = [f"{start_time.month:02d}"]
         days = [f"{day:02d}" for day in range(start_time.day, end_time.day + 1)]
@@ -465,7 +464,7 @@ def _download_sub_tp_data(
     download_data(tmp_file_path, ds_name, request)
 
     # open the downloaded data lazily
-    ds = xr.open_dataset(tmp_file_path, chunks={})
+    ds = xr.open_dataset(tmp_file_path, chunks={coord_name: 10})
 
     if truncate_later:
         print(f"Truncating data of range {range_idx} ...")
@@ -571,10 +570,12 @@ def download_total_precipitation_from_hourly_era5_land(
     if len(tmp_datasets) == 1:
         combined_ds = tmp_datasets[0]
     else:
+        print("Combining all sub-datasets ...")
         combined_ds = xr.concat(tmp_datasets, dim=coord_name)
         combined_ds = combined_ds.sortby(coord_name)
 
     # shift time back by 1 day
+    print("Shifting time back by 1 day ...")
     shifted_ds = preprocess.shift_time(
         combined_ds,
         offset=-1,

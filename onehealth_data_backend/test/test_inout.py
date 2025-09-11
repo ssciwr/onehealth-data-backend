@@ -604,6 +604,17 @@ def test_extract_years_months_days_from_range():
     assert days == all_days
     assert truncate is True
 
+    # same years, full months and days
+    start_time = datetime.strptime("2025-01-01", "%Y-%m-%d")
+    end_time = datetime.strptime("2025-12-31", "%Y-%m-%d")
+    years, months, days, truncate = inout._extract_years_months_days_from_range(
+        start_time, end_time
+    )
+    assert years == ["2025"]
+    assert months == all_months
+    assert days == all_days
+    assert truncate is False
+
     # same years, diff months
     start_time = datetime.strptime("2025-03-10", "%Y-%m-%d")
     end_time = datetime.strptime("2025-10-25", "%Y-%m-%d")
