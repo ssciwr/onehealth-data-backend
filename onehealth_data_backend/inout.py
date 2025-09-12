@@ -460,7 +460,11 @@ def _download_sub_tp_data(
         request["area"] = area
 
     # download data
-    tmp_file_path = out_dir / f"{file_name}_tmp{range_idx}.{file_ext}"
+    tmp_file_path = (
+        out_dir / f"{file_name}_tmp_"
+        f"{start_time.strftime('%Y-%m-%d')}-{end_time.strftime('%Y-%m-%d')}"
+        f".{file_ext}"
+    )
     if tmp_file_path.exists():
         print(f"File {tmp_file_path} already exists. Skipping download.")
         return tmp_file_path
@@ -470,7 +474,7 @@ def _download_sub_tp_data(
 
     if truncate_later:
         tmp_out = tmp_file_path.with_suffix(".truncated.nc")
-        with xr.open_dataset(tmp_file_path, chunks="auto") as ds:
+        with xr.open_dataset(tmp_file_path, chunks={coord_name: "auto"}) as ds:
             print(f"Truncating data of range {range_idx} ...")
             ds = preprocess.truncate_data_by_time(
                 ds,
@@ -488,10 +492,11 @@ def _download_sub_tp_data(
                 }
                 for var in ds.data_vars
             }
+            delayed = ds.to_netcdf(
+                tmp_out, mode="w", format="NETCDF4", encoding=encoding, compute=False
+            )
             with ProgressBar():  # parallel writing with dask
-                ds.to_netcdf(
-                    tmp_out, mode="w", format="NETCDF4", encoding=encoding, compute=True
-                )
+                delayed.compute()
         # replace the original temporary file
         print(f"Replacing {tmp_file_path} with truncated data ...")
         tmp_out.replace(tmp_file_path)
@@ -509,6 +514,7 @@ def download_total_precipitation_from_hourly_era5_land(
     ds_name: str = "reanalysis-era5-land",
     coord_name: str = "valid_time",
     var_name: str = "total_precipitation",
+    clean_tmp_files: bool = False,
 ) -> str:
     """Download total precipitation data from hourly ERA5-Land dataset.
     Due to the nature of this dataset, value at 00:00 is total precipitation
@@ -536,6 +542,8 @@ def download_total_precipitation_from_hourly_era5_land(
         var_name (str): Name of the data variable.
             Default is "total_precipitation".
             Only modify this if CDS changes the name of the variable.
+        clean_tmp_files (bool): Flag to indicate if temporary files should be deleted
+            after processing. Default is False.
 
     Returns:
         str: The path to the downloaded file.
@@ -545,6 +553,9 @@ def download_total_precipitation_from_hourly_era5_land(
         end_time = datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
         raise ValueError("start_date and end_date must be in 'YYYY-MM-DD' format.")
+
+    if start_time > end_time:
+        raise ValueError("start_date must be before or equal to end_date.")
 
     # prepare file name
     has_area = area is not None
@@ -587,7 +598,9 @@ def download_total_precipitation_from_hourly_era5_land(
 
     # combine all sub-datasets
     print("Combining all sub-datasets ...")
-    combined_ds = xr.open_mfdataset(tmp_files, chunks="auto", combine="by_coords")
+    combined_ds = xr.open_mfdataset(
+        tmp_files, chunks={coord_name: "auto"}, combine="by_coords"
+    )
     combined_ds = combined_ds.sortby(coord_name)
 
     # shift time back by 1 day
@@ -608,18 +621,21 @@ def download_total_precipitation_from_hourly_era5_land(
         }
         for var in combined_ds.data_vars
     }
+    delayed = combined_ds.to_netcdf(
+        output_file_path,
+        mode="w",
+        format="NETCDF4",
+        encoding=encoding,
+        compute=False,
+    )
     with ProgressBar():  # parallel writing with dask
-        combined_ds.to_netcdf(
-            output_file_path,
-            mode="w",
-            format="NETCDF4",
-            encoding=encoding,
-            compute=True,
-        )
+        delayed.compute()
 
-    # clean up temporary files
-    for tmp_file in tmp_files:
-        tmp_file.unlink()
+    if clean_tmp_files:
+        print("Cleaning up temporary files ...")
+        # clean up temporary files
+        for tmp_file in tmp_files:
+            tmp_file.unlink()
 
     print(
         "Total precipitation data from hourly dataset saved to {}".format(

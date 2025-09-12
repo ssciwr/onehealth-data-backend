@@ -673,11 +673,12 @@ def test_download_sub_tp_data_existing_file(tmp_path):
     out_dir = tmp_path / "test_sub_tp_existing"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    expected_file = out_dir / "era5_data_tmp0.nc"
-    expected_file.touch()
-
     start_date = "2025-03-30"
     end_date = "2025-03-31"
+
+    expected_file = out_dir / "era5_data_tmp_2025-03-30-2025-03-31.nc"
+    expected_file.touch()
+
     tmp_file_path = inout._download_sub_tp_data(
         date_range=(
             datetime.strptime(start_date, "%Y-%m-%d"),
@@ -700,13 +701,24 @@ def test_download_sub_tp_data_existing_file(tmp_path):
     tmp_file_path.unlink()
 
 
-def test_download_total_precipitation_from_hourly_era5_land_invalid_dates(tmpdir):
+def test_download_total_precipitation_from_hourly_era5_land_invalid_dates(tmp_path):
+    out_dir = tmp_path / "test_download_tp_invalid"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     with pytest.raises(ValueError):
         inout.download_total_precipitation_from_hourly_era5_land(
             start_date="2025",
             end_date=1.0,
             area=[0, -1, 0, 1],
-            out_dir=tmpdir,
+            out_dir=out_dir,
+        )
+
+    with pytest.raises(ValueError):
+        inout.download_total_precipitation_from_hourly_era5_land(
+            start_date="2025-01-01",
+            end_date="2024-12-31",
+            area=[0, -1, 0, 1],
+            out_dir=out_dir,
         )
 
 
@@ -727,11 +739,19 @@ def test_download_total_precipitation_from_hourly_era5_land_same_year_month(
         data_format="netcdf",
         ds_name="reanalysis-era5-land",
         coord_name="valid_time",
+        var_name="total_precipitation",
+        clean_tmp_files=False,  # keep temporary files for testing
     )
     output_file_name = "era5_data_2025-03-15-2025-03-17_midnight_tp_daily_raw.nc"
     output_file_path = out_dir / output_file_name
     assert output_file_path.exists()
     assert fname == str(output_file_path)
+
+    # check if temporary files are kept
+    tmp_file_path = out_dir / output_file_name.replace(
+        ".nc", "_tmp_2025-03-16-2025-03-18.nc"
+    )
+    assert tmp_file_path.exists()
 
     # manually download data for checking
     dataset = "reanalysis-era5-land"
@@ -760,6 +780,7 @@ def test_download_total_precipitation_from_hourly_era5_land_same_year_month(
     # clean up
     output_file_path.unlink()
     tmp_file.unlink()
+    tmp_file_path.unlink()
 
 
 def test_download_total_precipitation_from_hourly_era5_land_diff_year(
@@ -779,13 +800,17 @@ def test_download_total_precipitation_from_hourly_era5_land_diff_year(
         data_format="netcdf",
         ds_name="reanalysis-era5-land",
         coord_name="valid_time",
+        var_name="total_precipitation",
+        clean_tmp_files=True,  # remove temporary files after merging
     )
     output_file_name = "era5_data_2024-12-30-2025-01-02_midnight_tp_daily_area_raw.nc"
     output_file_path = out_dir / output_file_name
     assert output_file_path.exists()
 
     # check if temporary files are removed
-    tmp_file_path_1 = out_dir / output_file_name.replace(".nc", "_tmp0.nc")
+    tmp_file_path_1 = out_dir / output_file_name.replace(
+        ".nc", "_tmp_2024-12-31-2024-12-31.nc"
+    )
     assert not tmp_file_path_1.exists()
 
     # check if dates are correct in the downloaed dataset
@@ -819,6 +844,8 @@ def test_download_total_precipitation_from_hourly_era5_land_truncate(
         data_format="netcdf",
         ds_name="reanalysis-era5-land",
         coord_name="valid_time",
+        var_name="total_precipitation",
+        clean_tmp_files=True,
     )
 
     output_file_name = "era5_data_2024-10-15-2024-11-15_midnight_tp_daily_area_raw.nc"
