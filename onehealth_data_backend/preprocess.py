@@ -486,6 +486,39 @@ def resample_resolution(
     )
 
 
+def shift_time(
+    dataset: xr.Dataset,
+    offset: int = -1,
+    time_unit: Literal["W", "D", "h", "m", "s", "ms", "ns"] = "D",
+    var_name: str = "time",
+):
+    """Shift the time coordinate of a dataset by a specified timedelta.
+    The dataset is overwritten with the shifted time values.
+
+    Args:
+        dataset (xr.Dataset): Dataset to shift.
+        offset (int): Amount to shift the time coordinate. Default is -1.
+        time_unit (Literal["W", "D", "h", "m", "s", "ms", "ns"]):
+            Time unit for the shift. Default is "D".
+        var_name (str): Name of the time variable in the dataset. Default is "time".
+    """
+    if var_name not in dataset.coords:
+        raise ValueError(f"Coordinate '{var_name}' not found in dataset.")
+
+    if not isinstance(offset, int):
+        raise ValueError("Offset value must be an int.")
+
+    if time_unit not in ["W", "D", "h", "m", "s", "ms", "ns"]:
+        raise ValueError(
+            "time_unit must be one of 'W', 'D', 'h', 'm', 's', 'ms', or 'ns'."
+        )
+
+    dataset[var_name] = dataset[var_name] + np.timedelta64(offset, time_unit).astype(
+        "timedelta64[ns]"
+    )
+    return dataset
+
+
 def _parse_date(date: str | np.datetime64 | None) -> np.datetime64 | None:
     """Parse a date from string or numpy datetime64 to numpy datetime64.
     If the input is None, return None.

@@ -22,22 +22,42 @@ Create a `.cdsapirc` file containing your personal access token by following [th
 ### Naming convention
 The filenames of the downloaded netCDF files follow this structure:
 ```text linenums="0"
-source_name_list_of_years_list_of_months_list_of_vars[_montly][_area]_raw.ext
+{base_name}_{year_str}_{month_str}_{day_str}_{time_str}_{var_str}_{ds_type}_{area_str}_raw.{ext}
 ```
 
 * `source_name` is `"era5_data"`,
-* All years are firstly sorted.
-    * If years are continuous values, `list_of_years`is a concatenate of `min` and `max` values. Otherwise, `list_of_years` is a join of all years.
-    * However, if there are more than 5 years, we only keep the first 5 years and replace the rest by `"_etc"`
-* `list_of_months`can be `"all"`, representing a whole year, or a join of all months
-* Each variable has an abbreviation derived by the first letter of each word in the variable name (e.g. `tp` for `total precipitation`).
-    * All abbreviations are then concatenated
+* For list of numbers, i.e. years/months/days/times, the rule below is applied
+    * If the values are continuous, the string representation is a concatenate of `min` and `max` values, separated by `-`
+    * Otherwise, the string is a join of all values, separated by `_`
+    * However, if there are more than 5 values, we only keep the first 5 ones and replace the rest by `"_etc"`
+    * If the values are empty (e.g. no days or times in the download request), the string representation would be an empty string, i.e. `""`.
+* `year_str` is the string representation of list of years using the rule above.
+* Similarly for `month_str`. However, if the download requests all 12 months, `month_str` would be `"allm"`
+* `day_str` and `time_str` follows the same pattern, assuming that a month has at most 31 days (`"alld"`) and a day has at most 24 hours (`"allt"`).
+    * Special case: if data is downloaded at time `00:00` per day only, `time_str` would be `"midnight"` (e.g. precipitation data for P-model)
+* For `var_str`, each variable has an abbreviation derived by the first letter of each word in the variable name (e.g. `tp` for `total precipitation`).
+    * All abbreviations are then concatenated by `_`
     * If this concatenated string is longer than 30 characters, we only keep the first 2 characters and replace the the rest by `"_etc"`
-* If the file was downloaded from a monthly dataset, `"_monthly"` is presented in the file name
-* If the downloaded data is only for an area of the grid (instead of the whole map), `"_area"` is inserted into the file name
+* As for `ds_type`:
+    * If the file was downloaded from a monthly dataset, `"monthly"` is set to `ds_type`. This means the data is recorded only on the first day of each month.
+    * For other datasets, when data is downloaded only at midnight (`time_str` = `"midnight"`) the ds_type is `"daily"`, meaning one data record for one day of each month.
+    * `ds_type` would be an empty string in other cases, i.e. multiple data records for each day of a month.
+* For `area_str`, if the downloaded data is only for an area of the grid (instead of the whole map), `"area"` would represent for `area_str`.
 * If the part before `"_raw"` is longer than 100 characters, only the first 100 characters are kept and the rest is replaced by `"_etc"`
 * `"_raw"` is added at the end to indicate that the file is raw data
 * Extension `ext` of the file can be `.nc` or `.grib`
+* If any of these fields (from `year_str` to `area_str`) are missing from the download request, the corresponding string and the preceding `_` are removed from the file name.
+
+#### Special case:
+
+As for total precipitation data downloaded from dataset `ERA5-Land hourly data from 1950 to present`, the file name is structured as:
+
+```text linenums="0"
+{base_name}_{start_date}-{end_date}_{time_str}_{var_str}_{ds_type}_{area_str}_raw.{ext}
+```
+
+In this case, `time_str` is `"midnight"` and `ds_type` is `"daily"`.
+
 
 ## Eurostat's NUTS definition 
 The regions are set [here](https://ec.europa.eu/eurostat/en/web/products-manuals-and-guidelines/w/ks-gq-23-010) and corresponding shapefiles can be downloaded [here](https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics).

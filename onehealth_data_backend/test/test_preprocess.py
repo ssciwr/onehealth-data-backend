@@ -631,6 +631,61 @@ def test_resample_resolution_default(get_dataset):
     assert np.allclose(tp_interp.values, tp_expected.values)
 
 
+def test_shift_time_invalid(get_dataset):
+    with pytest.raises(ValueError):
+        preprocess.shift_time(
+            get_dataset, offset="invalid", time_unit="D", var_name="time"
+        )
+    with pytest.raises(ValueError):
+        preprocess.shift_time(
+            get_dataset, offset=2.5, time_unit="D", var_name="invalid"
+        )
+    with pytest.raises(ValueError):
+        preprocess.shift_time(get_dataset, offset=2, time_unit="Y", var_name="time")
+    with pytest.raises(ValueError):
+        preprocess.shift_time(get_dataset, offset=2, time_unit="M", var_name="time")
+
+
+def test_shift_time_forward(get_dataset):
+    original_time = get_dataset["time"].copy()
+    # shift time by 2 days
+    offset = 2
+    time_unit = "D"
+    time_shift = np.timedelta64(2, "D")
+    preprocess.shift_time(
+        get_dataset, offset=offset, time_unit=time_unit, var_name="time"
+    )
+
+    # check if the time dimension is preserved
+    assert len(get_dataset["time"]) == 2
+
+    # check if the time is shifted correctly
+    expected_time = original_time + time_shift.astype("timedelta64[ns]")
+    assert np.array_equal(
+        np.sort(get_dataset["time"].values), np.sort(expected_time.values)
+    )
+
+    # check if time is at midnight after shifting
+    assert all(get_dataset["time"].dt.hour.values == 0)
+
+
+def test_shift_time_backward(get_dataset):
+    original_time = get_dataset["time"].copy()
+
+    # shift time by -2 hours
+    offset = -2
+    time_unit = "h"
+    time_shift = np.timedelta64(offset, time_unit)
+    preprocess.shift_time(
+        get_dataset, offset=offset, time_unit=time_unit, var_name="time"
+    )
+    expected_time = original_time + time_shift.astype("timedelta64[ns]")
+    assert np.array_equal(
+        np.sort(get_dataset["time"].values), np.sort(expected_time.values)
+    )
+    assert all(get_dataset["time"].dt.hour.values == 22)
+
+
 def test_parse_date_invalid():
     with pytest.raises(ValueError):
         preprocess._parse_date(date="invalid_date")
