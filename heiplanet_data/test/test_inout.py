@@ -49,7 +49,8 @@ def test_download_data_valid(tmp_path):
 
 @pytest.fixture()
 def get_data():
-    data = np.random.rand(2, 3) * 1000 + 273.15
+    rng = np.random.default_rng(seed=42)
+    data = rng.random((2, 3)) * 1000 + 273.15
     data_array = xr.DataArray(
         data,
         dims=["latitude", "longitude"],
@@ -61,7 +62,7 @@ def get_data():
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_save_to_netcdf(get_data, tmp_path):
     with pytest.raises(ValueError):
-        inout.save_to_netcdf(get_data, None)
+        inout.save_to_netcdf(get_data, None, encoding=None)
 
     file_name = tmp_path / "test_output_celsius.nc"
     inout.save_to_netcdf(get_data, file_name)
