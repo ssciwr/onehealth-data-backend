@@ -6,6 +6,7 @@ import warnings
 from typing import Dict, Any, Tuple
 from datetime import datetime
 import socket
+from typing import Optional
 
 
 pkg = resources.files("heiplanet_data")
@@ -94,7 +95,9 @@ def _update_new_settings(settings: dict, new_settings: dict) -> bool:
 
 
 def save_settings_to_file(
-    settings: dict, dir_path: str = None, file_name: str = "updated_settings.json"
+    settings: dict,
+    dir_path: Optional[str] = None,
+    file_name: str = "updated_settings.json",
 ) -> None:
     """Save the settings to a file.
     If dir_path is None, save to the current directory.
