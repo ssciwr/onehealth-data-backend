@@ -8,7 +8,7 @@ from datetime import datetime
 import socket
 
 
-pkg = resources.files("onehealth_data_backend")
+pkg = resources.files("heiplanet_data")
 DEFAULT_SETTINGS_FILE = {
     "era5": Path(pkg / "era5_settings.json"),
     "isimip": Path(pkg / "isimip_settings.json"),
@@ -41,7 +41,7 @@ def is_valid_settings(settings: dict) -> bool:
     Returns:
         bool: True if the settings are valid, False otherwise.
     """
-    pkg = resources.files("onehealth_data_backend")
+    pkg = resources.files("heiplanet_data")
     setting_schema_path = Path(pkg / "setting_schema.json")
     setting_schema = json.load(open(setting_schema_path, "r", encoding="utf-8"))
 

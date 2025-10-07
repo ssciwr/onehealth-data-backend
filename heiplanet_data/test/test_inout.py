@@ -1,4 +1,4 @@
-from onehealth_data_backend import inout
+from heiplanet_data import inout
 import pytest
 import xarray as xr
 import numpy as np

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "onehealth-data-backend"
+name = "heiplanet-data"
 license = {text = "MIT License"}
 readme = "README.md"
 description = "Data processing for OneHealth project"

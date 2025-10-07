@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import xarray as xr
-from onehealth_data_backend import preprocess
+from heiplanet_data import preprocess
 import geopandas as gpd
 from shapely.geometry import Polygon
 from pathlib import Path

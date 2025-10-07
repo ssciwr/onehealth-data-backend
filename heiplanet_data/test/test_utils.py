@@ -1,7 +1,7 @@
 import pytest
 import json
 from pathlib import Path
-from onehealth_data_backend import utils
+from heiplanet_data import utils
 from datetime import datetime
 from conftest import get_files
 
