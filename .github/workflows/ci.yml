@@ -41,9 +41,9 @@ jobs:
 
     - name: Execute PyTest
       run: |
-        python -m pytest -svv --cov=onehealth_data_backend --cov-report=xml:onehealth_data_backend/coverage_re/coverage.xml
+        python -m pytest -svv --cov=heiplanet_data --cov-report=xml:heiplanet_data/coverage_re/coverage.xml
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./onehealth_data_backend/coverage_re/
+        directory: ./heiplanet_data/coverage_re/
