@@ -1,7 +1,7 @@
 site_name: One Health Platform
-site_url: https://ssciwr.github.io/onehealth-data-backend/
-repo_url: https://github.com/ssciwr/onehealth-data-backend
-repo_name: "ssciwr/onehealth-data-backend"
+site_url: https://ssciwr.github.io/heiplanet-data/
+repo_url: https://github.com/ssciwr/heiplanet-data
+repo_name: "ssciwr/heiplanet-data"
 copyright: Copyright &copy; 2025, Scientific Software Center, Heidelberg University.
 watch: [docs, docs_extra, README.md, LICENSE, mkdocs.yml]
 
@@ -22,8 +22,9 @@ nav:
   - References:
     - Package Modules: reference/
     - Demonstration Notebooks:
-      - data_pipeline.ipynb: source/notebooks/data_pipeline.ipynb
-      - prepare_data.ipynb: source/notebooks/prepare_data.ipynb
+      - Tutorial A: source/notebooks/data_pipeline.ipynb
+      - Tutorial B: source/notebooks/data_pipeline.ipynb
+      - Tutorial C: source/notebooks/data_pipeline.ipynb
   - Issues: issues.md
   - Contact: contact.md
 

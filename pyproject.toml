@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "heiplanet-data"
 license = {text = "MIT License"}
 readme = "README.md"
-description = "Data processing for OneHealth project"
+description = "Data processing pipeline for heiplanet"
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -49,5 +49,5 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ssciwr/onehealth-data-backend"
-Issues = "https://github.com/ssciwr/onehealth-data-backend/issues"
+Homepage = "https://github.com/ssciwr/heiplanet-data"
+Issues = "https://github.com/ssciwr/heiplanet-data/issues"

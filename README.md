@@ -1,13 +1,13 @@
 <!--intro-start-->
-# OneHealth data processing pipeline
+# heiplanet-data: A data processing pipeline for climate and population data
 
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ssciwr/onehealth-data-backend/main.svg)](https://results.pre-commit.ci/latest/github/ssciwr/onehealth-data-backend/main)
-![License: MIT](https://img.shields.io/github/license/ssciwr/onehealth-data-backend)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ssciwr/onehealth-data-backend/ci.yml?branch=main)
-![codecov](https://img.shields.io/codecov/c/github/ssciwr/onehealth-data-backend)
-![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ssciwr_onehealth-data-backend&metric=alert_status)
-![Language](https://img.shields.io/github/languages/top/ssciwr/onehealth-data-backend)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ssciwr/onehealth-data-backend/blob/main/onehealth-data-backend/docs/source/notebooks/tutorial_A_download_data.ipynb)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ssciwr/heiplanet-data/main.svg)](https://results.pre-commit.ci/latest/github/ssciwr/heiplanet-data/main)
+![License: MIT](https://img.shields.io/github/license/ssciwr/heiplanet-data)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ssciwr/heiplanet-data/ci.yml?branch=main)
+![codecov](https://img.shields.io/codecov/c/github/ssciwr/heiplanet-data)
+![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ssciwr_heiplanet-data&metric=alert_status)
+![Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-data)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_A_download_data.ipynb)
 
 A data processing pipeline for Copernicus and Eurostat data. Please visit the [documentation](https://ssciwr.github.io/onehealth-data-backend/) for further information.
 
@@ -21,9 +21,9 @@ A data processing pipeline for Copernicus and Eurostat data. Please visit the [d
 * [Contact](docs/contact.md): Contact information of relevant groups
 * [License](docs/license.md): License information
 
-[tutorial A]: https://colab.research.google.com/github/ssciwr/onehealth-data-backend/blob/main/onehealth-data-backend/docs/source/notebooks/tutorial_A_download_data.ipynb 
-[tutorial B]: https://colab.research.google.com/github/ssciwr/onehealth-data-backend/blob/main/onehealth-data-backend/docs/source/notebooks/tutorial_B_preprocess_data.ipynb
-[tutorial C]: https://colab.research.google.com/github/ssciwr/onehealth-data-backend/blob/main/onehealth-data-backend/docs/source/notebooks/tutorial_C_postprocess_data.ipynb
+[tutorial A]: https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_A_download_data.ipynb 
+[tutorial B]: https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_B_preprocess_data.ipynb
+[tutorial C]: https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_C_postprocess_data.ipynb
 
 
 <!--intro-end-->
