@@ -9,7 +9,7 @@
 ![Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-data)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_A_download_data.ipynb)
 
-A data processing pipeline for Copernicus and Eurostat data. Please visit the [documentation](https://ssciwr.github.io/onehealth-data-backend/) for further information.
+A data processing pipeline for Copernicus and Eurostat data. Please visit the [documentation](https://ssciwr.github.io/heiplanet-data/) for further information.
 
 **Further information:**
 
