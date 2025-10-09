@@ -22,9 +22,9 @@ nav:
   - References:
     - Package Modules: reference/
     - Demonstration Notebooks:
-      - Tutorial A: source/notebooks/data_pipeline.ipynb
-      - Tutorial B: source/notebooks/data_pipeline.ipynb
-      - Tutorial C: source/notebooks/data_pipeline.ipynb
+      - Tutorial A: source/notebooks/tutorial_A_download_data.ipynb
+      - Tutorial B: source/notebooks/tutorial_B_preprocess_data.ipynb
+      - Tutorial C: source/notebooks/tutorial_C_postprocess_data.ipynb
   - Issues: issues.md
   - Contact: contact.md
 
