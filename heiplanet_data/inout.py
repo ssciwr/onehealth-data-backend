@@ -1,10 +1,10 @@
 import cdsapi
 from pathlib import Path
 import xarray as xr
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
-from onehealth_data_backend import preprocess
-from dask.diagnostics import ProgressBar
+from heiplanet_data import preprocess
+from dask.diagnostics.progress import ProgressBar
 
 
 def download_data(output_file: Path, dataset: str, request: Dict[str, Any]):
@@ -33,7 +33,7 @@ def download_data(output_file: Path, dataset: str, request: Dict[str, Any]):
     print("Data downloaded successfully to {}".format(output_file))
 
 
-def save_to_netcdf(data: xr.DataArray, filename: str, encoding: Dict = None):
+def save_to_netcdf(data: xr.DataArray, filename: str, encoding: Optional[Dict] = None):
     """Save data to a NetCDF file.
 
     Args:

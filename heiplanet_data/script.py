@@ -1,18 +1,18 @@
 from pathlib import Path
-from onehealth_data_backend.inout import (
+from heiplanet_data.inout import (
     download_data,
     get_filename,
 )
-from onehealth_data_backend.preprocess import (
+from heiplanet_data.preprocess import (
     preprocess_data_file,
 )
-from onehealth_data_backend import utils
+from heiplanet_data import utils
 
 if __name__ == "__main__":
     # get the era5 land data for 2016 and 2017
     data_format = "netcdf"
-    data_folder = Path(".data_onehealth_db/bronze/")
-    data_folder_out = Path(".data_onehealth_db/silver/")
+    data_folder = Path(".data_heiplanet_db/bronze/")
+    data_folder_out = Path(".data_heiplanet_db/silver/")
 
     dataset = "reanalysis-era5-land-monthly-means"
     request = {
