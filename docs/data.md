@@ -40,7 +40,7 @@ The filenames of the downloaded netCDF files follow this structure:
     * If this concatenated string is longer than 30 characters, we only keep the first 2 characters and replace the the rest by `"_etc"`
 * As for `ds_type`:
     * If the file was downloaded from a monthly dataset, `"monthly"` is set to `ds_type`. This means the data is recorded only on the first day of each month.
-    * For other datasets, when data is downloaded only at midnight (`time_str` = `"midnight"`) the ds_type is `"daily"`, meaning one data record for one day of each month.
+    * For other datasets, when data is downloaded only at midnight (`time_str` = `"midnight"`), the ds_type is `"daily"`, meaning one data record for one day of each month.
     * `ds_type` would be an empty string in other cases, i.e. multiple data records for each day of a month.
 * For `area_str`, if the downloaded data is only for an area of the grid (instead of the whole map), `"area"` would represent for `area_str`.
 * If the part before `"_raw"` is longer than 100 characters, only the first 100 characters are kept and the rest is replaced by `"_etc"`
