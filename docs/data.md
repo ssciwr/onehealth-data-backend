@@ -30,7 +30,7 @@ The filenames of the downloaded netCDF files follow this structure:
     * If the values are continuous, the string representation is a concatenate of `min` and `max` values, separated by `-`
     * Otherwise, the string is a join of all values, separated by `_`
     * However, if there are more than 5 values, we only keep the first 5 ones and replace the rest by `"_etc"`
-    * If the values are empty (e.g. no days or times in the download request), the string representation would be an empty string, i.e. `""`.
+    * If the values are empty (e.g. no days or times in the download request), their string representation and the corresponding separator (i.e. `"_"`) are omitted from the file name.
 * `year_str` is the string representation of list of years using the rule above.
 * Similarly for `month_str`. However, if the download requests all 12 months, `month_str` would be `"allm"`
 * `day_str` and `time_str` follows the same pattern, assuming that a month has at most 31 days (`"alld"`) and a day has at most 24 hours (`"allt"`).
