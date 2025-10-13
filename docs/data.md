@@ -48,7 +48,7 @@ The filenames of the downloaded netCDF files follow this structure:
 * Extension `ext` of the file can be `.nc` or `.grib`
 * If any of these fields (from `year_str` to `area_str`) are missing from the download request, the corresponding string and the preceding `_` are removed from the file name.
 
-#### Special case:
+#### Special case
 
 As for total precipitation data downloaded from dataset `ERA5-Land hourly data from 1950 to present`, the file name is structured as:
 
