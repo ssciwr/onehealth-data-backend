@@ -803,7 +803,7 @@ def _aggregate_netcdf_nuts(
             data variables include aggregated data variables.
             The second item in the tuple is list of data variable names.
     """
-    with xr.open_dataset(nc_file) as dataset:
+    with xr.open_dataset(nc_file, chunks={"time": "auto"}) as dataset:
         # Ensure the dataset has the required coordinates
         if not all(
             coord in dataset.coords for coord in ["latitude", "longitude", "time"]
