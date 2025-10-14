@@ -6,9 +6,10 @@ import warnings
 from typing import Dict, Any, Tuple
 from datetime import datetime
 import socket
+from typing import Optional
 
 
-pkg = resources.files("onehealth_data_backend")
+pkg = resources.files("heiplanet_data")
 DEFAULT_SETTINGS_FILE = {
     "era5": Path(pkg / "era5_settings.json"),
     "isimip": Path(pkg / "isimip_settings.json"),
@@ -41,7 +42,7 @@ def is_valid_settings(settings: dict) -> bool:
     Returns:
         bool: True if the settings are valid, False otherwise.
     """
-    pkg = resources.files("onehealth_data_backend")
+    pkg = resources.files("heiplanet_data")
     setting_schema_path = Path(pkg / "setting_schema.json")
     setting_schema = json.load(open(setting_schema_path, "r", encoding="utf-8"))
 
@@ -94,7 +95,9 @@ def _update_new_settings(settings: dict, new_settings: dict) -> bool:
 
 
 def save_settings_to_file(
-    settings: dict, dir_path: str = None, file_name: str = "updated_settings.json"
+    settings: dict,
+    dir_path: Optional[str] = None,
+    file_name: str = "updated_settings.json",
 ) -> None:
     """Save the settings to a file.
     If dir_path is None, save to the current directory.

@@ -3,7 +3,7 @@ import xarray as xr
 import numpy as np
 import warnings
 from pathlib import Path
-from onehealth_data_backend import utils
+from heiplanet_data import utils
 import geopandas as gpd
 import pandas as pd
 import re
@@ -803,7 +803,7 @@ def _aggregate_netcdf_nuts(
             data variables include aggregated data variables.
             The second item in the tuple is list of data variable names.
     """
-    with xr.open_dataset(nc_file) as dataset:
+    with xr.open_dataset(nc_file, chunks={"time": "auto"}) as dataset:
         # Ensure the dataset has the required coordinates
         if not all(
             coord in dataset.coords for coord in ["latitude", "longitude", "time"]

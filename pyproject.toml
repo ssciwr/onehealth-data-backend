@@ -1,23 +1,22 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "onehealth-data-backend"
-license = {text = "MIT License"}
+name = "heiplanet-data"
+license = "MIT"
+dynamic = ["version"]
 readme = "README.md"
-description = "Data processing for OneHealth project"
+description = "Data processing pipeline for heiplanet"
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 authors = [
   { name="Tuyen Le", email="ssc@iwr.uni-heidelberg.de" },
   { name="Inga Ulusoy", email="ssc@iwr.uni-heidelberg.de" },
 ]
-version = "0.0.1"
 
 dependencies = [
   "cdsapi",
@@ -36,7 +35,10 @@ dependencies = [
 dev = [
     "pre-commit",
     "pytest",
-    "nbstripout",
+    "pytest-cov",
+    ]
+
+docs = [
     "mkdocs-material",
     "mkdocs-include-markdown-plugin",
     "mkdocs-glightbox",
@@ -49,5 +51,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ssciwr/onehealth-data-backend"
-Issues = "https://github.com/ssciwr/onehealth-data-backend/issues"
+Homepage = "https://github.com/ssciwr/heiplanet-data"
+Issues = "https://github.com/ssciwr/heiplanet-data/issues"
+
+[tool.setuptools]
+packages = ["heiplanet_data"]
