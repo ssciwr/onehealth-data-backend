@@ -4,8 +4,8 @@
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ssciwr/heiplanet-data/main.svg)](https://results.pre-commit.ci/latest/github/ssciwr/heiplanet-data/main)
 ![License: MIT](https://img.shields.io/github/license/ssciwr/heiplanet-data)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ssciwr/heiplanet-data/ci.yml?branch=main)
-![codecov](https://img.shields.io/codecov/c/github/ssciwr/heiplanet-data)
-![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ssciwr_heiplanet-data&metric=alert_status)
+[![codecov](https://codecov.io/gh/ssciwr/heiplanet-data/graph/badge.svg?token=26SVxiuDO7)](https://codecov.io/gh/ssciwr/heiplanet-data)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ssciwr_onehealth-data-backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ssciwr_onehealth-data-backend)
 ![Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-data)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ssciwr/heiplanet-data/blob/main/heiplanet-data/docs/source/notebooks/tutorial_A_download_data.ipynb)
 
