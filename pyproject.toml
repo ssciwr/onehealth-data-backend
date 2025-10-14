@@ -1,17 +1,16 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "heiplanet-data"
-license = {text = "MIT License"}
+license = "MIT"
 dynamic = ["version"]
 readme = "README.md"
 description = "Data processing pipeline for heiplanet"
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 authors = [
@@ -54,3 +53,6 @@ docs = [
 [project.urls]
 Homepage = "https://github.com/ssciwr/heiplanet-data"
 Issues = "https://github.com/ssciwr/heiplanet-data/issues"
+
+[tool.setuptools]
+packages = ["heiplanet_data"]
