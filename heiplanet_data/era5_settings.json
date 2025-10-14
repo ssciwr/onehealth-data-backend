@@ -1,5 +1,5 @@
 {
-    "output_dir": "../../../data/processed",
+    "output_dir": "processed",
     "adjust_longitude": true,
     "adjust_longitude_vname": "longitude",
     "adjust_longitude_fname": "adjlon",
