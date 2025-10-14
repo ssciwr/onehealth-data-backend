@@ -48,8 +48,11 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
-    - name: publish dist to pypi
+    - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        username: __token__
+        password: ${{ secrets.PYPI_TOKEN }}
 
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI
@@ -73,4 +76,6 @@ jobs:
     - name: Publish distribution 📦 to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        username: __token__
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         repository-url: https://test.pypi.org/legacy/
