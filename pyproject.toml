@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools >= 77.0.3"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "heiplanet-data"
@@ -54,11 +54,13 @@ docs = [
 Homepage = "https://github.com/ssciwr/heiplanet-data"
 Issues = "https://github.com/ssciwr/heiplanet-data/issues"
 
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["heiplanet_data"]
-# This tells setuptools to include non-Python files
 include-package-data = true
+include = [
+  "heiplanet_data/*.json"
+]
 
-# Tell setuptools what to include in the package
-[tool.setuptools.package-data]
-"heiplanet_data" = ["*.json"]
+[tool.hatch.version]
+source = "vcs"
+tag-pattern = "v(?P<version>.+)"
