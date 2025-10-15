@@ -56,3 +56,9 @@ Issues = "https://github.com/ssciwr/heiplanet-data/issues"
 
 [tool.setuptools]
 packages = ["heiplanet_data"]
+# This tells setuptools to include non-Python files
+include-package-data = true
+
+# Tell setuptools what to include in the package
+[tool.setuptools.package-data]
+"heiplanet_data" = ["*.json"]
